@@ -1,0 +1,188 @@
+{
+  "name": "public-value",
+  "version": "0.1.0",
+  "description": "Public value models, structs, and calculations for software engineers building for governmental and social sector organizations.",
+  "repository": "https://github.com/publicprojects-io/public-value-rust-crate/",
+  "language": "Rust",
+  "edition": "2024",
+  "source": {
+    "project": "public-value-metrics",
+    "repository": "https://github.com/public-value-metrics/public-value-metrics",
+    "locale": "en-gb-oxendict",
+    "topics_ported": 64,
+    "scope_excluded": ["locale-translation infrastructure", "SvelteKit documentation site (*.github.io)"]
+  },
+  "extensions": {
+    "description": "Items not ported from a public-value-metrics topic file; each completes a connection an existing topic references but doesn't implement. See spec/topics.md's Extensions section for sources.",
+    "count": 11,
+    "test_file": "tests/comprehensive_extensions.rs"
+  },
+  "conventions": {
+    "shared_types": ["Money", "Ratio", "Percentage"],
+    "shared_types_module": "src/units.rs",
+    "money_backing_type": "rust_decimal::Decimal",
+    "lints": {
+      "missing_docs": "deny",
+      "clippy::pedantic": "deny"
+    },
+    "spec": ["spec/architecture.md", "spec/topics.md"]
+  },
+  "docs": [
+    { "path": "README.md", "description": "Module list, quick-start example, testing instructions." },
+    { "path": "docs/tutorials/getting-started.md", "description": "A worked business case spanning three modules." },
+    { "path": "docs/tutorials/porting-a-new-topic.md", "description": "The process for adding a new topic." },
+    { "path": "spec/architecture.md", "description": "The four modelling shapes and crate-wide conventions." },
+    { "path": "spec/topics.md", "description": "All 64 source topics mapped to their Rust module and primary symbol." }
+  ],
+  "modules": [
+    {
+      "name": "units",
+      "file": "src/units.rs",
+      "description": "Shared Money/Ratio/Percentage newtypes used across every calculation.",
+      "public_items": ["Money", "Ratio", "Percentage"]
+    },
+    {
+      "name": "foundations",
+      "file": "src/foundations.rs",
+      "description": "Public value foundations: the eight concepts everything else builds on.",
+      "topics": [
+        "public-value", "value-for-money", "opportunity-cost-in-public-spending",
+        "social-discount-rate", "distributional-weighting", "additionality-and-deadweight",
+        "displacement-and-attribution", "counterfactual-analysis"
+      ],
+      "public_items": [
+        "StrategicTriangle", "ValueForMoneyOption", "net_public_value", "discount_factor",
+        "present_value", "distributional_weight", "weighted_benefit", "net_additional_outcomes",
+        "net_additional_impact", "attribution_shares_valid", "difference_in_differences"
+      ]
+    },
+    {
+      "name": "economic_appraisal",
+      "file": "src/economic_appraisal.rs",
+      "description": "Governmental economic appraisal: the Green Book five-case model through shadow pricing.",
+      "topics": [
+        "green-book-appraisal", "social-cost-benefit-analysis",
+        "cost-effectiveness-analysis-in-government", "multi-criteria-decision-analysis",
+        "wellbeing-valuation", "stated-preference-valuation", "revealed-preference-valuation",
+        "shadow-pricing"
+      ],
+      "public_items": [
+        "FiveCaseModel", "annuity_factor", "net_present_social_value", "benefit_cost_ratio",
+        "cost_effectiveness_ratio", "incremental_cost_effectiveness_ratio", "weighted_score",
+        "wellbys", "monetize_wellbys", "aggregate_stated_preference_value", "hedonic_implicit_price",
+        "travel_cost_annual_value", "shadow_carbon_benefit", "shadow_wage_rate",
+        "net_social_benefit_per_hour"
+      ],
+      "extension_items": [
+        "qaly", "clears_qaly_threshold", "years_of_life_lost", "years_lived_with_disability",
+        "disability_adjusted_life_years"
+      ]
+    },
+    {
+      "name": "impact_measurement",
+      "file": "src/impact_measurement.rs",
+      "description": "Social value and impact measurement: SROI through impact vs process evaluation.",
+      "topics": [
+        "social-return-on-investment", "theory-of-change", "logic-model", "outcomes-vs-outputs",
+        "social-value-act", "unit-cost-databases", "impact-evaluation-methods",
+        "impact-evaluation-vs-process-evaluation"
+      ],
+      "public_items": [
+        "value_net_of_rate", "sroi_ratio", "CausalLink", "TheoryOfChange", "assumption_hold_rate",
+        "LogicModel", "net_outcome_uplift", "attributable_outcome_count",
+        "proportional_social_value_score", "applied_unit_cost_value",
+        "difference_in_differences_impact", "propensity_score_matching_impact",
+        "CombinedDiagnosis", "diagnose"
+      ]
+    },
+    {
+      "name": "performance_metrics",
+      "file": "src/performance_metrics.rs",
+      "description": "Governmental performance and delivery metrics: KPIs through trust and legitimacy.",
+      "topics": [
+        "public-sector-kpis", "public-value-scorecard", "outcomes-based-accountability",
+        "payment-by-results-and-social-impact-bonds", "public-service-productivity",
+        "citizen-satisfaction-metrics", "service-standards-and-transaction-metrics",
+        "trust-and-legitimacy-metrics"
+      ],
+      "public_items": [
+        "kpi_percentage", "PublicValueScorecard", "PerformanceAccountability",
+        "payment_by_results_total", "quality_adjusted_output_index",
+        "productivity_growth_percentage_points", "net_satisfaction", "cost_per_transaction",
+        "channel_shift_saving", "failure_demand_cost", "LegitimacyTriangulation"
+      ],
+      "extension_items": ["net_promoter_score"]
+    },
+    {
+      "name": "philanthropy_metrics",
+      "file": "src/philanthropy_metrics.rs",
+      "description": "Social sector and philanthropy metrics: cost per outcome through volunteer time value.",
+      "topics": [
+        "cost-per-outcome", "cost-per-beneficiary", "blended-value",
+        "effective-altruism-cost-effectiveness", "charity-overhead-ratio",
+        "donor-return-on-investment", "grant-outcomes-reporting", "volunteer-time-value"
+      ],
+      "public_items": [
+        "cost_per_outcome", "cost_per_beneficiary", "BlendedValue",
+        "effective_altruism_cost_effectiveness", "units_produced", "charity_overhead_ratio",
+        "programme_ratio", "donor_return_on_investment", "bespoke_reporting_relationships",
+        "standardized_reporting_mappings", "volunteer_time_value"
+      ]
+    },
+    {
+      "name": "digital_government",
+      "file": "src/digital_government.rs",
+      "description": "Public value in digital government: the service standard through AI in government value.",
+      "topics": [
+        "digital-service-standard", "cost-per-transaction", "channel-shift-savings",
+        "digital-inclusion", "government-as-a-platform", "open-data-value",
+        "public-sector-cybersecurity-value", "ai-in-government-value"
+      ],
+      "public_items": [
+        "ServiceAssessment", "prorate_annual_value", "failed_assessment_cost",
+        "gross_channel_shift_saving", "fte_released", "blended_cost_per_transaction",
+        "platform_adoption_saving", "cost_avoided_open_data_value", "annualized_loss_expectancy",
+        "security_control_value", "handling_time_cost", "net_ai_value"
+      ]
+    },
+    {
+      "name": "societal_indicators",
+      "file": "src/societal_indicators.rs",
+      "description": "Wellbeing, equity and societal indicators: GDP alternatives through intergenerational equity.",
+      "topics": [
+        "gdp-alternatives", "human-development-index", "multidimensional-poverty-index",
+        "wellbeing-adjusted-life-years", "index-of-multiple-deprivation", "social-capital-metrics",
+        "natural-capital-accounting", "intergenerational-equity-and-sustainability-discounting"
+      ],
+      "public_items": [
+        "genuine_progress_indicator", "gnh_sufficiency", "HumanDevelopmentIndex",
+        "human_development_index", "mpi_headcount_ratio", "multidimensional_poverty_index",
+        "imd_domain_contribution", "imd_composite_score", "imd_decile",
+        "social_capital_pillar_gap", "ecosystem_asset_value", "present_value_across_schedule"
+      ],
+      "extension_items": [
+        "gini_coefficient", "atkinson_inequality_measure", "inequality_adjusted_dimension_index",
+        "inequality_adjusted_hdi", "ihdi_loss_percentage"
+      ]
+    },
+    {
+      "name": "delivery_connection",
+      "file": "src/delivery_connection.rs",
+      "description": "Software engineering and digital delivery connection: cost of delay through AI productivity.",
+      "topics": [
+        "cost-of-delay-in-public-programmes", "dora-metrics-for-public-value",
+        "flow-metrics-in-government-delivery", "technical-debt-as-public-value-erosion",
+        "total-cost-of-ownership-in-government-it", "build-vs-buy-in-government",
+        "benefits-realization", "ai-productivity-in-the-public-sector"
+      ],
+      "public_items": [
+        "cost_of_delay_per_week", "total_delay_loss", "lead_time_value_pulled_forward",
+        "fewer_failed_changes", "incident_avoidance_saving", "cycle_time", "flow_efficiency",
+        "technical_debt_principal", "technical_debt_ratio", "interest_reduction",
+        "payback_period_years", "total_cost_of_ownership", "risk_adjusted_build_cost",
+        "buy_total_cost", "realization_rate", "eligible_developers", "ai_capacity_value",
+        "net_capacity_ratio", "delay_wellby_loss"
+      ]
+    }
+  ]
+}

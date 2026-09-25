@@ -1,0 +1,61 @@
+# public-value
+
+> A Rust crate of public value models, structs, and calculations for software engineers building
+> for governmental and social sector organizations: value for money, cost-benefit and
+> cost-effectiveness analysis, social return on investment, the Human Development Index, DORA
+> metrics translated into public-value terms, and 59 other formulas and frameworks. Each of the 64
+> core items is ported from one topic in the `public-value-metrics` book
+> (https://github.com/public-value-metrics/public-value-metrics), with a doctest reproducing that
+> topic's worked example. A further 11 items (QALYs, DALYs, the Gini coefficient, the
+> Inequality-adjusted HDI, Net Promoter Score) are independently researched extensions completing
+> connections the source topics reference but don't implement — see spec/topics.md's "Extensions"
+> section.
+
+Money, Ratio, and Percentage are typed newtypes, not plain `f64` — `Money` is backed by
+`rust_decimal::Decimal` for exact decimal arithmetic. Every public function is `#[must_use]` and
+documented; `#![deny(missing_docs)]` and `#![deny(clippy::pedantic)]` are enforced crate-wide.
+
+## Docs
+
+- [README](README.md): module list, quick-start example, testing instructions.
+- [Getting started tutorial](docs/tutorials/getting-started.md): a worked business case spanning
+  three modules.
+- [Porting a new topic tutorial](docs/tutorials/porting-a-new-topic.md): the process for adding a
+  topic, for maintainers or contributors.
+- [Architecture spec](spec/architecture.md): the four modelling shapes, shared newtypes, naming and
+  lint conventions — the single source of truth for how this crate is built.
+- [Topic mapping spec](spec/topics.md): all 64 source topics mapped to their Rust module and
+  primary type/function.
+
+## Modules
+
+- [`units`](src/units.rs): the shared `Money`/`Ratio`/`Percentage` newtypes every other module uses.
+- [`foundations`](src/foundations.rs): public value foundations (the strategic triangle, value for
+  money, opportunity cost, the social discount rate, distributional weighting, deadweight,
+  displacement, counterfactual analysis).
+- [`economic_appraisal`](src/economic_appraisal.rs): the Green Book five-case model, social
+  cost-benefit analysis, cost-effectiveness analysis, multi-criteria decision analysis, wellbeing
+  valuation, stated/revealed preference valuation, shadow pricing.
+- [`impact_measurement`](src/impact_measurement.rs): social return on investment, theory of change,
+  logic models, outcomes vs outputs, the Social Value Act, unit cost databases, impact evaluation
+  methods.
+- [`performance_metrics`](src/performance_metrics.rs): public sector KPIs, the public value
+  scorecard, outcomes-based accountability, payment by results, public service productivity,
+  citizen satisfaction, service standards, trust and legitimacy metrics.
+- [`philanthropy_metrics`](src/philanthropy_metrics.rs): cost per outcome, cost per beneficiary,
+  blended value, effective-altruism-style cost-effectiveness, charity overhead ratio, donor ROI,
+  grant outcomes reporting, volunteer time value.
+- [`digital_government`](src/digital_government.rs): the digital service standard, cost per
+  transaction, channel shift savings, digital inclusion, government as a platform, open data value,
+  cybersecurity value, AI in government value.
+- [`societal_indicators`](src/societal_indicators.rs): GDP alternatives, the Human Development
+  Index, the Multidimensional Poverty Index, wellbeing-adjusted life years, the Index of Multiple
+  Deprivation, social capital metrics, natural capital accounting, intergenerational equity.
+- [`delivery_connection`](src/delivery_connection.rs): cost of delay, DORA metrics for public
+  value, flow metrics, technical debt as public value erosion, total cost of ownership, build vs
+  buy, benefits realization, AI productivity in the public sector.
+
+## Optional
+
+- [`llms.json`](llms.json): the same index as structured JSON, for programmatic consumption.
+- [`Cargo.toml`](Cargo.toml): dependencies, lint configuration, package metadata.

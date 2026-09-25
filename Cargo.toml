@@ -1,14 +1,22 @@
 [package]
 name = "public-value"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 authors = ["Joel Parker Henderson <joel@joelparkerhenderson.com>"]
 description = "Public value models, structs, calculations, and examples."
 readme = "README.md"
-repository = "https://github.com/publicprojeccts-io/public-value-rust-crate/"
+repository = "https://github.com/publicprojects-io/public-value-rust-crate/"
 license = "MIT OR Apache-2.0 OR BSD-3-Clause OR GPL-2.0-only OR GPL-3.0-only"
 keywords = ["public", "economics", "statistics", "analytics", "governmental"]
 categories = ["science", "data-structures", "finance"]
-include = ["src/**/*", "docs/tutorials/**/*", "LICENSE.md", "README.md", "llms.txt", "llms.json"]
+include = ["src/**/*", "docs/tutorials/**/*", "LICENSE-*.md", "README.md", "llms.txt", "llms.json"]
 
 [dependencies]
+rust_decimal = { version = "1.43.0", features = ["maths"] }
+rust_decimal_macros = "1.40.0"
+
+[lints.rust]
+missing_docs = "deny"
+
+[lints.clippy]
+pedantic = { level = "deny", priority = -1 }

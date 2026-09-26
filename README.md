@@ -6,9 +6,10 @@ Public value models, structs, and calculations for software engineers building f
 social sector organizations: value for money, cost-benefit and cost-effectiveness analysis, social
 return on investment, the Human Development Index, DORA-metrics-to-public-value translation, and 59
 other formulas and frameworks, each ported with a worked example from
-[`public-value-metrics`](https://github.com/public-value-metrics/public-value-metrics) — plus a
-handful of independently researched extensions (QALYs, DALYs, the Gini coefficient, the
-Inequality-adjusted HDI, Net Promoter Score) that complete connections the source topics reference
+[`public-value-metrics`](https://github.com/public-value-metrics/public-value-metrics) — plus 16
+independently researched extensions (QALYs, DALYs, the Gini coefficient, the Inequality-adjusted
+HDI, Net Promoter Score, leakage/multiplier effects, real-value conversion, the Value of a
+Statistical Life, Internal Rate of Return) that complete connections the source topics reference
 but don't implement. See [`spec/topics.md`](spec/topics.md#extensions-beyond-the-base-64-topics).
 
 ```toml
@@ -62,16 +63,18 @@ Each module below is one category from the source material; each public item is 
 
 `StrategicTriangle`, `ValueForMoneyOption`, `net_public_value`, `discount_factor`/`present_value`,
 `distributional_weight`/`weighted_benefit`, `net_additional_outcomes`, `net_additional_impact`,
-`difference_in_differences`.
+`difference_in_differences`, plus `leakage_adjustment`/`multiplier_effect` completing the
+additionality-and-deadweight net-impact chain (extensions).
 
 ### [`economic_appraisal`](src/economic_appraisal.rs) — governmental economic appraisal
 
 `FiveCaseModel`, `annuity_factor`, `net_present_social_value`/`benefit_cost_ratio`,
 `cost_effectiveness_ratio`/`incremental_cost_effectiveness_ratio`, `weighted_score`,
 `wellbys`/`monetize_wellbys`, `aggregate_stated_preference_value`, `hedonic_implicit_price`,
-`travel_cost_annual_value`, `shadow_carbon_benefit`, `shadow_wage_rate`, plus the health-economics
-units these formulas reference but don't implement: `qaly`/`clears_qaly_threshold` and
-`years_of_life_lost`/`years_lived_with_disability`/`disability_adjusted_life_years` (see
+`travel_cost_annual_value`, `shadow_carbon_benefit`, `shadow_wage_rate`, plus five extensions
+completing connections these formulas reference but don't implement: `qaly`/`clears_qaly_threshold`,
+`years_of_life_lost`/`years_lived_with_disability`/`disability_adjusted_life_years`, `real_value`,
+`value_of_statistical_life`, and `internal_rate_of_return` (see
 [Extensions](spec/topics.md#extensions-beyond-the-base-64-topics)).
 
 ### [`impact_measurement`](src/impact_measurement.rs) — social value and impact measurement
@@ -115,7 +118,7 @@ units these formulas reference but don't implement: `qaly`/`clears_qaly_threshol
 ## Testing this crate
 
 ```sh
-cargo test                          # unit + integration + 107 doctests
+cargo test                          # unit + integration + 112 doctests
 cargo clippy --all-targets -- -D warnings
 cargo doc --no-deps --open
 ```

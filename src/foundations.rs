@@ -360,3 +360,56 @@ pub fn difference_in_differences(
 ) -> f64 {
     (treated_after - treated_before) - (comparison_after - comparison_before)
 }
+
+/// Net impact once leakage (benefit accruing outside the target group or area) is subtracted:
+/// `net_impact × (1 − leakage rate)`.
+///
+/// This is not one of the 64 topics ported from `public-value-metrics`, but `additionality-and-deadweight`'s
+/// own "The maths" section states the full UK evaluation net-impact sequence as "gross outcome −
+/// deadweight − displacement − leakage, × multiplier = net additional impact" — leakage and the
+/// multiplier effect (see [`multiplier_effect`]) are named in that formula but neither this
+/// crate's [`net_additional_outcomes`] (deadweight) nor [`net_additional_impact`] (displacement)
+/// implements them, so they are added here to complete the chain, per the standard UK
+/// Additionality Guide (BIS, 4th edition, 2014) formulation: `gross × (1 − substitution) × (1 −
+/// leakage) × (1 − displacement) × multiplier`.
+///
+/// # Examples
+///
+/// ```
+/// use public_value::foundations::leakage_adjustment;
+/// use public_value::units::Percentage;
+///
+/// // Illustrative regeneration grant: 100 jobs created, 20% of the benefit accrues to residents
+/// // outside the target area (leakage).
+/// let net_of_leakage = leakage_adjustment(100.0, Percentage::from_percent(20.0));
+/// assert!((net_of_leakage - 80.0).abs() < 1e-9);
+/// ```
+#[must_use]
+pub fn leakage_adjustment(net_impact: f64, leakage_rate: Percentage) -> f64 {
+    net_impact * (1.0 - leakage_rate.as_fraction())
+}
+
+/// Applies an economic multiplier (additional indirect and induced activity, e.g. supplier
+/// spending and employee re-spending) to a net impact figure: `net_impact × multiplier`.
+///
+/// This is not one of the 64 topics ported from `public-value-metrics` — see [`leakage_adjustment`]
+/// for why it is implemented here. A multiplier of `1.25` means a direct effect of 200 (e.g. jobs)
+/// generates a total effect of 250 once indirect and induced activity is counted; IMPLAN's
+/// widely-used economic impact methodology publishes exactly this kind of worked ratio, and
+/// multipliers are consistently larger for larger regions (less activity "leaks" out) — a
+/// statewide Texas furniture-manufacturing employment multiplier of 2.73 compares to 2.05 for
+/// Dallas County alone.
+///
+/// # Examples
+///
+/// ```
+/// use public_value::foundations::multiplier_effect;
+///
+/// // A direct effect of 200 jobs, with a multiplier of 1.25, generates a total effect of 250.
+/// let total_effect = multiplier_effect(200.0, 1.25);
+/// assert!((total_effect - 250.0).abs() < 1e-9);
+/// ```
+#[must_use]
+pub fn multiplier_effect(net_impact: f64, multiplier: f64) -> f64 {
+    net_impact * multiplier
+}

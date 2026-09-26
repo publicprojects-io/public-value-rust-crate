@@ -539,3 +539,125 @@ pub fn years_lived_with_disability(incident_cases: u32, average_duration_years: 
 pub fn disability_adjusted_life_years(years_of_life_lost: f64, years_lived_with_disability: f64) -> f64 {
     years_of_life_lost + years_lived_with_disability
 }
+
+/// Converts a nominal (current-price) money amount to a real (inflation-adjusted) amount, using a
+/// price index: `nominal × (base period index / current period index)`.
+///
+/// This is not one of the 64 topics ported from `public-value-metrics`, but `social-discount-rate`'s
+/// own pitfalls section explicitly warns against "discounting real and nominal cash flows
+/// inconsistently" — since "the Green Book rate is a real rate; discounting nominal cash flows with
+/// it materially understates present values" — without providing the real/nominal conversion
+/// itself, so it is implemented here to complete that connection (standard GDP-deflator method:
+/// `Real = Nominal / Deflator × 100`, expressed here as a ratio of two index values on the same
+/// scale rather than a deflator already multiplied by 100).
+///
+/// # Panics
+///
+/// Panics if `current_period_price_index` is zero.
+///
+/// # Examples
+///
+/// ```
+/// use public_value::economic_appraisal::real_value;
+/// use public_value::units::{Money, iso};
+/// use rust_decimal_macros::dec;
+///
+/// // £1,150,000 nominal in a year when the price index has risen from 100 (base year) to 115.
+/// let real = real_value(Money::from_decimal(dec!(1_150_000), iso::USD), dec!(100), dec!(115));
+/// assert_eq!(*real.amount(), dec!(1_000_000));
+/// ```
+#[must_use]
+pub fn real_value(nominal_value: Money, base_period_price_index: Decimal, current_period_price_index: Decimal) -> Money {
+    nominal_value.mul(base_period_price_index).expect("multiplication overflow").div(current_period_price_index).expect("division by zero or overflow")
+}
+
+/// The Value of a Statistical Life (VSL), via the revealed-preference wage-risk (hedonic wage)
+/// method: the annual compensating wage premium workers accept for a given increase in annual
+/// fatality risk, divided by that risk change: `VSL = wage premium / risk change`.
+///
+/// This is not one of the 64 topics ported from `public-value-metrics`, but `social-cost-benefit-analysis`
+/// cites HM Treasury's published VSL figure (≈£2.1m) as a given input without showing how such a
+/// figure is derived, and `revealed-preference-valuation` implements the same hedonic logic for
+/// house prices ([`hedonic_implicit_price`]) without applying it to wages, so this completes both
+/// connections. Hedonic wage studies combine real wage data with data on job-specific fatality
+/// risk to infer the premium workers require to accept small risk increases (BLS Census of Fatal
+/// Occupational Injuries-style methodology; see the NBER and Viscusi literature on compensating
+/// wage differentials).
+///
+/// # Panics
+///
+/// Panics if `annual_fatality_risk_change` is zero.
+///
+/// # Examples
+///
+/// ```
+/// use public_value::economic_appraisal::value_of_statistical_life;
+/// use public_value::units::{Money, iso};
+/// use rust_decimal_macros::dec;
+///
+/// // A job with a 1-in-10,000 (0.0001) higher annual fatality risk commands a £210/year wage
+/// // premium in a hedonic wage study — implying a VSL matching HM Treasury's published ≈£2.1m
+/// // figure.
+/// let vsl = value_of_statistical_life(Money::from_decimal(dec!(210), iso::USD), 0.0001);
+/// assert_eq!(vsl.amount().round_dp(0), dec!(2_100_000));
+/// ```
+#[must_use]
+pub fn value_of_statistical_life(annual_wage_premium: Money, annual_fatality_risk_change: f64) -> Money {
+    let risk_change = Decimal::from_f64_retain(annual_fatality_risk_change).expect("finite risk change converts to Decimal");
+    annual_wage_premium.div(risk_change).expect("division by zero or overflow")
+}
+
+/// The Internal Rate of Return (IRR): the discount rate at which a cash-flow series' net present
+/// value is zero, found by bisection. `cash_flows[0]` is conventionally the initial (negative)
+/// outlay; later entries are the returns in each subsequent period.
+///
+/// This is not one of the 64 topics ported from `public-value-metrics`, but IRR is the standard
+/// companion figure to net present value in the economic case of a [`FiveCaseModel`] business case
+/// — Green Book appraisals routinely report both — so it is implemented here to complete that
+/// pairing. Returns `None` if the cash-flow series has no sign change in net present value across
+/// the search range (roughly −99% to +1000%), meaning no real IRR exists in that range (e.g. an
+/// all-positive or all-negative cash-flow series).
+///
+/// # Examples
+///
+/// ```
+/// use public_value::economic_appraisal::internal_rate_of_return;
+///
+/// // £1,000 outlay returning £500/year for 3 years.
+/// let irr = internal_rate_of_return(&[-1_000.0, 500.0, 500.0, 500.0], 1e-9, 200).unwrap();
+/// assert!((irr - 0.2338).abs() < 0.001);
+/// ```
+#[must_use]
+pub fn internal_rate_of_return(cash_flows: &[f64], tolerance: f64, max_iterations: u32) -> Option<f64> {
+    let net_present_value = |rate: f64| -> f64 {
+        cash_flows
+            .iter()
+            .enumerate()
+            .map(|(period, cash_flow)| cash_flow / (1.0 + rate).powi(i32::try_from(period).unwrap_or(i32::MAX)))
+            .sum()
+    };
+
+    let mut low_rate = -0.99_f64;
+    let mut high_rate = 10.0_f64;
+    let mut npv_at_low = net_present_value(low_rate);
+    let npv_at_high = net_present_value(high_rate);
+    if npv_at_low.signum() == npv_at_high.signum() {
+        return None;
+    }
+
+    let mut midpoint_rate = low_rate;
+    for _ in 0..max_iterations {
+        midpoint_rate = f64::midpoint(low_rate, high_rate);
+        let npv_at_midpoint = net_present_value(midpoint_rate);
+        if npv_at_midpoint.abs() < tolerance {
+            return Some(midpoint_rate);
+        }
+        if npv_at_midpoint.signum() == npv_at_low.signum() {
+            low_rate = midpoint_rate;
+            npv_at_low = npv_at_midpoint;
+        } else {
+            high_rate = midpoint_rate;
+        }
+    }
+    Some(midpoint_rate)
+}

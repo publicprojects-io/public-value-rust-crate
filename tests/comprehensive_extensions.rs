@@ -2,14 +2,16 @@
 //! `spec/topics.md` for why each was added and its sources.
 
 use public_value::economic_appraisal::{
-    clears_qaly_threshold, disability_adjusted_life_years, qaly, years_lived_with_disability,
-    years_of_life_lost,
+    clears_qaly_threshold, disability_adjusted_life_years, internal_rate_of_return, qaly,
+    real_value, value_of_statistical_life, years_lived_with_disability, years_of_life_lost,
 };
+use public_value::foundations::{leakage_adjustment, multiplier_effect};
 use public_value::performance_metrics::net_promoter_score;
 use public_value::societal_indicators::{
     atkinson_inequality_measure, gini_coefficient, human_development_index, ihdi_loss_percentage,
     inequality_adjusted_dimension_index, inequality_adjusted_hdi,
 };
+use public_value::units::Percentage;
 use rust_decimal_macros::dec;
 use rusty_money::{Money, iso};
 
@@ -88,4 +90,47 @@ fn net_promoter_score_citizen_survey() {
     // All-promoter and all-detractor edge cases land on the scale's endpoints.
     assert!((net_promoter_score(1_000, 0, 1_000) - 100.0).abs() < 1e-9);
     assert!((net_promoter_score(0, 1_000, 1_000) - -100.0).abs() < 1e-9);
+}
+
+/// Leakage and multiplier: completing `additionality-and-deadweight`'s full net-impact sequence
+/// (gross − deadweight − displacement − leakage, × multiplier).
+#[test]
+fn leakage_and_multiplier_effect() {
+    let net_of_leakage = leakage_adjustment(100.0, Percentage::from_percent(20.0));
+    assert!((net_of_leakage - 80.0).abs() < 1e-9);
+
+    // IMPLAN-style worked example: a direct effect of 200 jobs with a 1.25 multiplier.
+    let total_effect = multiplier_effect(200.0, 1.25);
+    assert!((total_effect - 250.0).abs() < 1e-9);
+}
+
+/// Real value: converting a nominal amount to real (base-year) terms via a price index, completing
+/// `social-discount-rate`'s pitfall against mixing real and nominal cash flows.
+#[test]
+fn real_value_price_index_conversion() {
+    let real = real_value(Money::from_decimal(dec!(1_150_000), iso::USD), dec!(100), dec!(115));
+    assert_eq!(*real.amount(), dec!(1_000_000));
+
+    // A price index unchanged from the base year leaves the nominal value untouched.
+    let unchanged = real_value(Money::from_decimal(dec!(500_000), iso::USD), dec!(100), dec!(100));
+    assert_eq!(*unchanged.amount(), dec!(500_000));
+}
+
+/// Value of a Statistical Life: the wage-risk hedonic method reconciles with HM Treasury's
+/// published ≈£2.1m figure (already cited as a given input in `social-cost-benefit-analysis`).
+#[test]
+fn value_of_statistical_life_wage_risk_method() {
+    let vsl = value_of_statistical_life(Money::from_decimal(dec!(210), iso::USD), 0.0001);
+    assert_eq!(vsl.amount().round_dp(0), dec!(2_100_000));
+}
+
+/// Internal Rate of Return: the standard companion to net present value in a `FiveCaseModel`
+/// economic case, found by bisection over a classic textbook cash-flow series.
+#[test]
+fn internal_rate_of_return_textbook_series() {
+    let irr = internal_rate_of_return(&[-1_000.0, 500.0, 500.0, 500.0], 1e-9, 200).unwrap();
+    assert!((irr - 0.2338).abs() < 0.001);
+
+    // An all-positive cash-flow series has no real discount rate that zeroes its NPV.
+    assert!(internal_rate_of_return(&[1_000.0, 500.0, 500.0], 1e-9, 200).is_none());
 }

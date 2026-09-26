@@ -6,10 +6,10 @@ are an AI coding agent working in this repository, read this file first.
 
 ## What this crate is
 
-75 public items across 8 modules (`src/foundations.rs` through `src/delivery_connection.rs`), plus
+80 public items across 8 modules (`src/foundations.rs` through `src/delivery_connection.rs`), plus
 a shared `src/units.rs` of `Money`/`Ratio`/`Percentage` newtypes. 64 of those items each correspond
 to one topic in [`public-value-metrics`](https://github.com/public-value-metrics/public-value-metrics)'s
-`en-gb-oxendict` locale; a further 11 are independently researched extensions (see
+`en-gb-oxendict` locale; a further 16 are independently researched extensions (see
 `spec/topics.md`'s "Extensions" section) that complete a connection a source topic references but
 doesn't implement. `spec/architecture.md` is the single source of truth for how the crate is
 designed; `spec/topics.md` maps every ported topic to its module and symbol, and lists the
@@ -19,7 +19,7 @@ extensions separately. Read both before adding or changing a public item.
 
 ```sh
 cargo build
-cargo test                                  # unit + integration + 107 doctests
+cargo test                                  # unit + integration + 112 doctests
 cargo clippy --all-targets -- -D warnings   # must be clean; clippy::pedantic is denied crate-wide
 cargo doc --no-deps                         # must build without warnings; missing_docs is denied
 ```

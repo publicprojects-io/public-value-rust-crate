@@ -6,7 +6,7 @@
 > metrics translated into public-value terms, and 59 other formulas and frameworks. Each of the 64
 > core items is ported from one topic in the `public-value-metrics` book
 > (https://github.com/public-value-metrics/public-value-metrics), with a doctest reproducing that
-> topic's worked example. A further 11 items (QALYs, DALYs, the Gini coefficient, the
+> topic's worked example. A further 16 items (QALYs, DALYs, the Gini coefficient, the
 > Inequality-adjusted HDI, Net Promoter Score) are independently researched extensions completing
 > connections the source topics reference but don't implement — see spec/topics.md's "Extensions"
 > section.

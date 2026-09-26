@@ -14,7 +14,7 @@
   },
   "extensions": {
     "description": "Items not ported from a public-value-metrics topic file; each completes a connection an existing topic references but doesn't implement. See spec/topics.md's Extensions section for sources.",
-    "count": 11,
+    "count": 16,
     "test_file": "tests/comprehensive_extensions.rs"
   },
   "conventions": {
@@ -55,7 +55,8 @@
         "StrategicTriangle", "ValueForMoneyOption", "net_public_value", "discount_factor",
         "present_value", "distributional_weight", "weighted_benefit", "net_additional_outcomes",
         "net_additional_impact", "attribution_shares_valid", "difference_in_differences"
-      ]
+      ],
+      "extension_items": ["leakage_adjustment", "multiplier_effect"]
     },
     {
       "name": "economic_appraisal",
@@ -76,7 +77,8 @@
       ],
       "extension_items": [
         "qaly", "clears_qaly_threshold", "years_of_life_lost", "years_lived_with_disability",
-        "disability_adjusted_life_years"
+        "disability_adjusted_life_years", "real_value", "value_of_statistical_life",
+        "internal_rate_of_return"
       ]
     },
     {

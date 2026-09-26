@@ -5,9 +5,9 @@ description: Compute public value metrics (SROI, value for money, cost-effective
 
 # Using the `public-value` crate
 
-This crate (`src/*.rs`) is a typed, tested library of 75 public value calculations: 64 each ported
+This crate (`src/*.rs`) is a typed, tested library of 80 public value calculations: 64 each ported
 from one topic in the [`public-value-metrics`](https://github.com/public-value-metrics/public-value-metrics)
-book, plus 11 independently researched extensions (QALYs, DALYs, the Gini coefficient, the
+book, plus 16 independently researched extensions (QALYs, DALYs, the Gini coefficient, the
 Inequality-adjusted HDI, Net Promoter Score — see `spec/topics.md`'s "Extensions" section). Prefer
 it over deriving a formula from memory: every function's rustdoc reproduces a real worked example,
 so you can sanity-check your own numbers against a known-correct one before wiring a new caller.

@@ -25,7 +25,7 @@ use rust_decimal_macros::dec;
 
 // £450,000 spent; 630 households achieved food security (not just received a food parcel).
 let cost = cost_per_outcome(Money::new(dec!(450_000)), 630);
-println!("Cost per outcome: {cost}"); // 714.29
+println!("Cost per outcome: {cost}"); // $714.29
 ```
 
 Every public function and type carries a doctest reproducing a real worked example from the source
@@ -39,9 +39,11 @@ application, and procurement bid — which is exactly how a deadweight adjustmen
 dropped from an SROI ratio, or a discount rate gets applied inconsistently across two options in
 the same appraisal. This crate gives those calculations a typed, tested, version-controlled home:
 
-- **[`units`](src/units.rs)** — shared `Money` (backed by [`rust_decimal::Decimal`], not `f64`, so
-  repeated addition and percentage scaling stay exact), `Ratio`, and `Percentage` newtypes, so a
-  ratio and a percentage and a money amount can't be swapped by accident at a call site.
+- **[`units`](src/units.rs)** — shared `Money` (backed by [`rusty_money`](https://docs.rs/rusty-money),
+  not a bare `f64` or `Decimal`, so repeated addition and percentage scaling stay exact; every value
+  is tagged with a fixed internal working currency, `USD`, so arithmetic never hits a currency
+  mismatch — see the module's rustdoc), `Ratio`, and `Percentage` newtypes, so a ratio and a
+  percentage and a money amount can't be swapped by accident at a call site.
 - **Worked-example doctests** — every public item's rustdoc reproduces an actual number from its
   source topic's worked example, not an invented one, so the documentation is also a regression
   test.

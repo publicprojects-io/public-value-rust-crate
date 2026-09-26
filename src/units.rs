@@ -4,24 +4,35 @@
 //! accident at a call site. [`Money`], [`Ratio`], and [`Percentage`] exist to make that class of
 //! mistake a type error instead of a silent bug.
 //!
-//! [`Money`] wraps [`Decimal`] rather than `f64`: monetary figures in the source material are exact
-//! decimal amounts (£450,000, £8,500 per person), and repeated addition, subtraction, and
-//! percentage scaling of `f64` money accumulates binary floating-point rounding error that has no
-//! business appearing in a cost-benefit case. [`Ratio`] and [`Percentage`] stay `f64` because
-//! several formulas need transcendental functions (natural log, roots) that are naturally lossy
-//! anyway, and because a ratio or percentage is a reporting figure, not an amount that gets added
-//! to other amounts.
+//! [`Money`] wraps [`rusty_money::Money`] rather than a bare `f64` or `Decimal`: monetary figures
+//! in the source material are exact decimal amounts (£450,000, £8,500 per person), and repeated
+//! addition, subtraction, and percentage scaling of `f64` money accumulates binary
+//! floating-point rounding error that has no business appearing in a cost-benefit case.
+//! `rusty_money::Money` requires every amount to carry a [`rusty_money::iso::Currency`]; this
+//! crate fixes that currency to `USD` for every value it constructs, as a single internal working
+//! currency, so that two `Money` values built anywhere in the crate can always be added or
+//! compared without a runtime currency-mismatch error. Several worked examples ported from the
+//! source material are stated in GBP (`public-value-metrics` is UK-focused); the doc comments and
+//! prose still cite the real pound figures HM Treasury and others publish, but the `Money` values
+//! those doctests construct are tagged `USD` like every other value in the crate — the tag is a
+//! `rusty_money` implementation requirement, not a currency-conversion claim. [`Ratio`] and
+//! [`Percentage`] stay `f64` because several formulas need transcendental functions (natural log,
+//! roots) that are naturally lossy anyway, and because a ratio or percentage is a reporting
+//! figure, not an amount that gets added to other amounts.
 
+use std::cmp::Ordering;
 use std::fmt;
 use std::ops::{Add, Div, Mul, Sub};
 
 use rust_decimal::Decimal;
 use rust_decimal::prelude::ToPrimitive;
+use rusty_money::{Money as RustyMoney, iso};
 
-/// A currency amount, unit-agnostic (the caller decides GBP, USD, or otherwise), backed by a
-/// fixed-point [`Decimal`] so repeated addition and percentage scaling stay exact.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Money(Decimal);
+/// A currency amount, backed by [`rusty_money::Money`] fixed to `USD` as this crate's single
+/// internal working currency (see the module docs) so repeated addition and percentage scaling
+/// stay exact.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Money(RustyMoney<'static, iso::Currency>);
 
 impl Money {
     /// Creates a new money amount from an exact decimal value.
@@ -36,14 +47,14 @@ impl Money {
     /// assert_eq!(cost.value(), dec!(450_000));
     /// ```
     #[must_use]
-    pub const fn new(amount: Decimal) -> Self {
-        Self(amount)
+    pub fn new(amount: Decimal) -> Self {
+        Self(RustyMoney::from_decimal(amount, iso::USD))
     }
 
     /// Returns the underlying decimal amount.
     #[must_use]
-    pub const fn value(self) -> Decimal {
-        self.0
+    pub fn value(self) -> Decimal {
+        *self.0.amount()
     }
 
     /// Returns the dimensionless ratio of this amount to `other` (`self / other`).
@@ -65,16 +76,21 @@ impl Money {
     /// ```
     #[must_use]
     pub fn ratio_to(self, other: Self) -> Ratio {
-        let ratio = self.0 / other.0;
+        let ratio = self.value() / other.value();
         Ratio::new(ratio.to_f64().expect("decimal ratio fits in f64"))
     }
 }
+
+/// A currency mismatch here would mean this crate constructed a `Money` in a currency other than
+/// its single internal working currency (`USD`), which is a bug in the crate, not a runtime
+/// condition callers need to plan for.
+const CURRENCY_INVARIANT: &str = "public-value::units::Money always uses one internal working currency (USD)";
 
 impl Add for Money {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self {
-        Self(self.0 + rhs.0)
+        Self(self.0.add(rhs.0).expect(CURRENCY_INVARIANT))
     }
 }
 
@@ -82,7 +98,7 @@ impl Sub for Money {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self {
-        Self(self.0 - rhs.0)
+        Self(self.0.sub(rhs.0).expect(CURRENCY_INVARIANT))
     }
 }
 
@@ -90,7 +106,7 @@ impl Mul<Decimal> for Money {
     type Output = Self;
 
     fn mul(self, scale: Decimal) -> Self {
-        Self(self.0 * scale)
+        Self(self.0.mul(scale).expect("multiplication overflow"))
     }
 }
 
@@ -101,7 +117,7 @@ impl Div<Decimal> for Money {
     ///
     /// Panics if `scale` is zero.
     fn div(self, scale: Decimal) -> Self {
-        Self(self.0 / scale)
+        Self(self.0.div(scale).expect("division by zero or overflow"))
     }
 }
 
@@ -109,7 +125,7 @@ impl Mul<u32> for Money {
     type Output = Self;
 
     fn mul(self, count: u32) -> Self {
-        Self(self.0 * Decimal::from(count))
+        Self(self.0.mul(Decimal::from(count)).expect("multiplication overflow"))
     }
 }
 
@@ -120,18 +136,27 @@ impl Div<u32> for Money {
     ///
     /// Panics if `count` is zero.
     fn div(self, count: u32) -> Self {
-        Self(self.0 / Decimal::from(count))
+        Self(self.0.div(Decimal::from(count)).expect("division by zero or overflow"))
+    }
+}
+
+impl PartialOrd for Money {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Money {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.compare(&other.0).expect(CURRENCY_INVARIANT)
     }
 }
 
 impl fmt::Display for Money {
-    /// Renders to 2 decimal places, rounded (not truncated).
-    ///
-    /// `Decimal`'s own `{:.2}` formatting truncates rather than rounds (e.g. `714.2857...` formats
-    /// as `714.28`, not `714.29`), which is the wrong default for a monetary amount, so this rounds
-    /// with [`Decimal::round_dp`] first.
+    /// Delegates to `rusty_money::Money`'s own currency-aware, locale-aware formatting, which
+    /// rounds to the currency's exponent using half-to-even rounding (not truncation).
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:.2}", self.0.round_dp(2))
+        write!(f, "{}", self.0)
     }
 }
 

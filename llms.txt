@@ -12,8 +12,10 @@
 > section.
 
 Money, Ratio, and Percentage are typed newtypes, not plain `f64` — `Money` is backed by
-`rust_decimal::Decimal` for exact decimal arithmetic. Every public function is `#[must_use]` and
-documented; `#![deny(missing_docs)]` and `#![deny(clippy::pedantic)]` are enforced crate-wide.
+`rusty_money::Money` for exact decimal arithmetic, with every value tagged to a single fixed
+internal working currency (`USD`) so amounts built anywhere in the crate can always be combined.
+Every public function is `#[must_use]` and documented; `#![deny(missing_docs)]` and
+`#![deny(clippy::pedantic)]` are enforced crate-wide.
 
 ## Docs
 

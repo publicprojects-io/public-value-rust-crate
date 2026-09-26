@@ -20,7 +20,8 @@
   "conventions": {
     "shared_types": ["Money", "Ratio", "Percentage"],
     "shared_types_module": "src/units.rs",
-    "money_backing_type": "rust_decimal::Decimal",
+    "money_backing_type": "rusty_money::Money",
+    "money_internal_currency": "USD (fixed for every Money value constructed by this crate; see src/units.rs)",
     "lints": {
       "missing_docs": "deny",
       "clippy::pedantic": "deny"

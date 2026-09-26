@@ -169,10 +169,11 @@ dependencies = [
 
 [[package]]
 name = "public-value"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "rust_decimal",
  "rust_decimal_macros",
+ "rusty-money",
 ]
 
 [[package]]
@@ -281,6 +282,16 @@ name = "rustversion"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f"
+
+[[package]]
+name = "rusty-money"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9826983e8a9a2f301a3810bb98618948ae7e7f2ba073eaaa16ab19104b33f2c"
+dependencies = [
+ "arrayvec",
+ "rust_decimal",
+]
 
 [[package]]
 name = "serde"

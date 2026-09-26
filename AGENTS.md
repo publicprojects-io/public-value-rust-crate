@@ -30,13 +30,21 @@ still fails on something in `tests/`.
 
 ## Conventions (full detail in `spec/architecture.md`)
 
-- **Money is `Decimal`, never `f64`.** Build `Money` values with `rust_decimal_macros::dec!`
-  (`Money::new(dec!(450_000))`), not from a float literal. `Ratio` and `Percentage` stay `f64`
-  because several formulas need transcendental functions.
-- **`Money`'s `Display` rounds, it does not truncate.** `rust_decimal`'s own `{:.2}` formatting
-  truncates rather than rounds (`714.2857...` formats as `714.28`, not `714.29`); `Money`'s
-  `Display` impl calls `.round_dp(2)` first specifically to avoid this. If you format a `Decimal`
-  directly anywhere, apply the same fix.
+- **Money is `rusty_money::Money`, never a bare `f64` or `Decimal`.** Build `Money` values with
+  `rust_decimal_macros::dec!` (`Money::new(dec!(450_000))`), not from a float literal —
+  `Money::new` still takes a `Decimal` and tags it with the crate's fixed internal working currency
+  (`iso::USD`) internally. `Ratio` and `Percentage` stay `f64` because several formulas need
+  transcendental functions.
+- **Every `Money` is tagged `USD` internally, even in GBP-labelled worked examples.**
+  `rusty_money::Money` requires a `Currency`; this crate fixes it to `USD` for every value so two
+  `Money` values built anywhere in the crate can always be added or compared without a runtime
+  currency-mismatch error. Doc comments still cite the real pound figures the source material
+  publishes — only the underlying type's currency tag is fixed, not the prose. Never construct a
+  `Money` with a different currency; every `+`/`-`/`<`/`>` on `Money` will panic on a mismatch (see
+  `src/units.rs`'s `CURRENCY_INVARIANT`).
+- **`Money`'s `Display` shows a currency symbol and rounds correctly.** It delegates to
+  `rusty_money::Money`'s own locale-aware formatting (`$714.29`, not a bare `714.29`), which rounds
+  half-to-even rather than truncating.
 - **Converting `f64` to `Decimal` leaves binary-floating-point residue.** `Decimal::from_f64_retain`
   on a value like `0.6` or `0.005` does not land on an exact decimal; a downstream `assert_eq!` will
   fail by a sub-cent amount. Round with `.round_dp(n)` before an exact comparison, or use a

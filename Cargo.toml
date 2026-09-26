@@ -1,6 +1,6 @@
 [package]
 name = "public-value"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 authors = ["Joel Parker Henderson <joel@joelparkerhenderson.com>"]
 description = "Public value models, structs, calculations, and examples."
@@ -14,6 +14,7 @@ include = ["src/**/*", "docs/tutorials/**/*", "LICENSE-*.md", "README.md", "llms
 [dependencies]
 rust_decimal = { version = "1.43.0", features = ["maths"] }
 rust_decimal_macros = "1.40.0"
+rusty-money = { version = "0.5.1", features = ["iso"] }
 
 [lints.rust]
 missing_docs = "deny"

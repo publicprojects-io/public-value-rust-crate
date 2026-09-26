@@ -37,14 +37,27 @@ explicitly **out of scope** for this crate.
 Plain `f64`/`u32` throughout would let a ratio and a percentage and a money amount all be swapped by
 accident. Instead:
 
-- `Money(Decimal)` — a currency amount, unit-agnostic (the source docs are GBP; we don't encode
-  that, callers do), backed by `rust_decimal::Decimal` rather than `f64` so repeated addition and
-  percentage scaling of money stays exact. Supports `+`, `-`, `*`/`/` by `Decimal` (scaling), and
-  `*`/`/` by `u32` (headcounts). Dividing `Money` by `Money` yields a plain `f64` `Ratio` (via
-  `Money::ratio_to`, which is the one place a monetary figure is allowed to become a float, because
-  a ratio is a reporting figure, not an amount anything gets added back to), not `Money`. Build
-  `Money` values with the `rust_decimal_macros::dec!` literal macro (`Money::new(dec!(450_000))`),
-  never from an `f64`.
+- `Money(rusty_money::Money<'static, iso::Currency>)` — a currency amount, backed by
+  [`rusty_money`](https://docs.rs/rusty-money) rather than a bare `f64` or `Decimal`, so repeated
+  addition and percentage scaling of money stays exact. `rusty_money::Money` requires every value
+  to carry a `Currency`; this crate fixes that to `USD` for every value it constructs (`Money::new`
+  always tags `iso::USD`), as a single internal working currency, so any two `Money` values built
+  anywhere in the crate can always be added or compared without a runtime currency-mismatch error.
+  Several worked examples are stated in GBP in the source material (`public-value-metrics` is
+  UK-focused) — the doc comments still cite the real pound figures HM Treasury and others publish,
+  but the `Money` values those doctests construct are tagged `USD` like everything else; the tag is
+  a `rusty_money` implementation requirement, not a currency-conversion claim. `Money` supports `+`,
+  `-`, `*`/`/` by `Decimal` (scaling), and `*`/`/` by `u32` (headcounts) — these are `std::ops`
+  operator impls on *our* wrapper that delegate to `rusty_money::Money`'s fallible `add`/`sub`/`mul`/`div`
+  methods internally, `.expect()`-ing them (documented as `# Panics`), so call sites keep ordinary
+  infix arithmetic rather than `Result`-chaining. `PartialOrd`/`Ord` are implemented the same way,
+  delegating to `rusty_money::Money::compare`. Dividing `Money` by `Money` yields a plain `f64`
+  `Ratio` (via `Money::ratio_to`, which is the one place a monetary figure is allowed to become a
+  float, because a ratio is a reporting figure, not an amount anything gets added back to), not
+  `Money`. Build `Money` values with the `rust_decimal_macros::dec!` literal macro
+  (`Money::new(dec!(450_000))`), never from an `f64` — `rust_decimal` and `rust_decimal_macros`
+  remain direct dependencies of this crate (as well as being `rusty_money`'s own internal decimal
+  type) purely for that literal-construction and `Decimal`-typed function-parameter purpose.
 - `Ratio(f64)` — a dimensionless ratio (e.g. an SROI ratio, a cost-effectiveness ratio). Has
   `Ratio::new`, `.value()`, and `Display` (`"1.44"`, `"1.44:1"` is left to callers who want that
   framing).
@@ -53,8 +66,12 @@ accident. Instead:
   builds one from a `0.0..=100.0` value; `.as_fraction()` and `.as_percent()` read it back either
   way. `Display` renders as `"42.0%"`.
 
-All three: `#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]`, a `const fn new`/constructor where
-possible, `#[must_use]` on every method that returns a value, and full rustdoc with a doctest.
+All three: `Debug, Clone, Copy, PartialEq, PartialOrd` (derived for `Ratio`/`Percentage`; for
+`Money`, `PartialEq`/`Eq`/`Hash` are derived but `PartialOrd`/`Ord` are hand-implemented against
+`rusty_money::Money::compare`, and arithmetic operators are hand-implemented against its fallible
+methods — see above), `#[must_use]` on every method that returns a value, and full rustdoc with a
+doctest. `Ratio`/`Percentage` constructors stay `const fn`; `Money`'s cannot be, since
+`rusty_money::Money::from_decimal` isn't `const`.
 
 No newtype for plain counts (people, deployments, years) — those stay `u32`/`f64` as appropriate;
 wrapping them added no safety the source docs' arithmetic needed.

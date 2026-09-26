@@ -14,7 +14,7 @@ but don't implement. See [`spec/topics.md`](spec/topics.md#extensions-beyond-the
 
 ```toml
 [dependencies]
-public-value = "0.3"
+public-value = "1"
 rusty-money = "0.5"
 rust_decimal_macros = "1"
 ```

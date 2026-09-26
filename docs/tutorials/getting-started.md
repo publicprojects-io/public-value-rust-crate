@@ -7,7 +7,7 @@ the way a real appraisal usually draws from several of this book's topics at onc
 
 ```toml
 [dependencies]
-public-value = "0.3"
+public-value = "1"
 rusty-money = "0.5"
 rust_decimal_macros = "1"
 ```

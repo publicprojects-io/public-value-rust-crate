@@ -1,163 +1,69 @@
-//! Shared numeric newtypes used across every public value calculation.
+//! Shared numeric types used across every public value calculation.
 //!
 //! Plain primitives everywhere would let a ratio, a percentage, and a money amount be swapped by
 //! accident at a call site. [`Money`], [`Ratio`], and [`Percentage`] exist to make that class of
 //! mistake a type error instead of a silent bug.
 //!
-//! [`Money`] wraps [`rusty_money::Money`] rather than a bare `f64` or `Decimal`: monetary figures
-//! in the source material are exact decimal amounts (£450,000, £8,500 per person), and repeated
-//! addition, subtraction, and percentage scaling of `f64` money accumulates binary
-//! floating-point rounding error that has no business appearing in a cost-benefit case.
-//! `rusty_money::Money` requires every amount to carry a [`rusty_money::iso::Currency`]; this
-//! crate fixes that currency to `USD` for every value it constructs, as a single internal working
-//! currency, so that two `Money` values built anywhere in the crate can always be added or
-//! compared without a runtime currency-mismatch error. Several worked examples ported from the
-//! source material are stated in GBP (`public-value-metrics` is UK-focused); the doc comments and
-//! prose still cite the real pound figures HM Treasury and others publish, but the `Money` values
-//! those doctests construct are tagged `USD` like every other value in the crate — the tag is a
-//! `rusty_money` implementation requirement, not a currency-conversion claim. [`Ratio`] and
-//! [`Percentage`] stay `f64` because several formulas need transcendental functions (natural log,
-//! roots) that are naturally lossy anyway, and because a ratio or percentage is a reporting
-//! figure, not an amount that gets added to other amounts.
+//! [`Money`] is [`rusty_money::Money`] used directly — not wrapped in a crate-local newtype —
+//! fixed to the [`iso::Currency`] `USD` via the [`Money`] type alias below, so callers write
+//! `Money::from_decimal(dec!(450_000), iso::USD)` rather than the fully generic
+//! `rusty_money::Money<'static, iso::Currency>`. `rusty_money::Money` requires every value to
+//! carry a `Currency`; every construction in this crate uses `iso::USD`, as a single internal
+//! working currency, so any two `Money` values built anywhere in the crate can always be combined.
+//! Because `rusty_money::Money` exposes arithmetic and ordering as fallible, `Result`-returning
+//! methods (`add`, `sub`, `mul`, `div`, `compare`) rather than `std::ops` operators, every
+//! calculation module calls those methods directly and `.expect(CURRENCY_INVARIANT)`s the result
+//! — documented on each call site as `# Panics` — instead of using `+`/`-`/`*`/`/`/`<`/`>`.
+//!
+//! Several worked examples ported from the source material are stated in GBP
+//! (`public-value-metrics` is UK-focused); the doc comments and prose still cite the real pound
+//! figures HM Treasury and others publish, but the `Money` values those doctests construct are
+//! tagged `USD` like every other value in the crate — the tag is a `rusty_money` implementation
+//! requirement, not a currency-conversion claim.
+//!
+//! [`Ratio`] and [`Percentage`] stay `f64` because several formulas need transcendental functions
+//! (natural log, roots) that are naturally lossy anyway, and because a ratio or percentage is a
+//! reporting figure, not an amount that gets added to other amounts.
 
-use std::cmp::Ordering;
 use std::fmt;
-use std::ops::{Add, Div, Mul, Sub};
 
-use rust_decimal::Decimal;
 use rust_decimal::prelude::ToPrimitive;
-use rusty_money::{Money as RustyMoney, iso};
+pub use rusty_money::iso;
 
-/// A currency amount, backed by [`rusty_money::Money`] fixed to `USD` as this crate's single
-/// internal working currency (see the module docs) so repeated addition and percentage scaling
-/// stay exact.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Money(RustyMoney<'static, iso::Currency>);
+/// A currency amount: [`rusty_money::Money`] fixed to `USD` as this crate's single internal
+/// working currency (see the module docs).
+pub type Money = rusty_money::Money<'static, iso::Currency>;
 
-impl Money {
-    /// Creates a new money amount from an exact decimal value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use public_value::units::Money;
-    /// use rust_decimal_macros::dec;
-    ///
-    /// let cost = Money::new(dec!(450_000));
-    /// assert_eq!(cost.value(), dec!(450_000));
-    /// ```
-    #[must_use]
-    pub fn new(amount: Decimal) -> Self {
-        Self(RustyMoney::from_decimal(amount, iso::USD))
-    }
-
-    /// Returns the underlying decimal amount.
-    #[must_use]
-    pub fn value(self) -> Decimal {
-        *self.0.amount()
-    }
-
-    /// Returns the dimensionless ratio of this amount to `other` (`self / other`).
-    ///
-    /// # Panics
-    ///
-    /// Panics if `other` is zero, or if the resulting ratio cannot be represented as an `f64`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use public_value::units::Money;
-    /// use rust_decimal_macros::dec;
-    ///
-    /// let outcomes = Money::new(dec!(359_070));
-    /// let inputs = Money::new(dec!(250_000));
-    /// let sroi = outcomes.ratio_to(inputs);
-    /// assert!((sroi.value() - 1.436_28).abs() < 0.001);
-    /// ```
-    #[must_use]
-    pub fn ratio_to(self, other: Self) -> Ratio {
-        let ratio = self.value() / other.value();
-        Ratio::new(ratio.to_f64().expect("decimal ratio fits in f64"))
-    }
-}
-
-/// A currency mismatch here would mean this crate constructed a `Money` in a currency other than
-/// its single internal working currency (`USD`), which is a bug in the crate, not a runtime
+/// The message every `.expect()` on a `Money` arithmetic or comparison result carries in this
+/// crate. A currency mismatch here would mean the crate constructed a `Money` in a currency other
+/// than its single internal working currency (`USD`), which is a bug in the crate, not a runtime
 /// condition callers need to plan for.
-const CURRENCY_INVARIANT: &str = "public-value::units::Money always uses one internal working currency (USD)";
+pub const CURRENCY_INVARIANT: &str = "public-value::units::Money always uses one internal working currency (USD)";
 
-impl Add for Money {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self {
-        Self(self.0.add(rhs.0).expect(CURRENCY_INVARIANT))
-    }
-}
-
-impl Sub for Money {
-    type Output = Self;
-
-    fn sub(self, rhs: Self) -> Self {
-        Self(self.0.sub(rhs.0).expect(CURRENCY_INVARIANT))
-    }
-}
-
-impl Mul<Decimal> for Money {
-    type Output = Self;
-
-    fn mul(self, scale: Decimal) -> Self {
-        Self(self.0.mul(scale).expect("multiplication overflow"))
-    }
-}
-
-impl Div<Decimal> for Money {
-    type Output = Self;
-
-    /// # Panics
-    ///
-    /// Panics if `scale` is zero.
-    fn div(self, scale: Decimal) -> Self {
-        Self(self.0.div(scale).expect("division by zero or overflow"))
-    }
-}
-
-impl Mul<u32> for Money {
-    type Output = Self;
-
-    fn mul(self, count: u32) -> Self {
-        Self(self.0.mul(Decimal::from(count)).expect("multiplication overflow"))
-    }
-}
-
-impl Div<u32> for Money {
-    type Output = Self;
-
-    /// # Panics
-    ///
-    /// Panics if `count` is zero.
-    fn div(self, count: u32) -> Self {
-        Self(self.0.div(Decimal::from(count)).expect("division by zero or overflow"))
-    }
-}
-
-impl PartialOrd for Money {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Money {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.0.compare(&other.0).expect(CURRENCY_INVARIANT)
-    }
-}
-
-impl fmt::Display for Money {
-    /// Delegates to `rusty_money::Money`'s own currency-aware, locale-aware formatting, which
-    /// rounds to the currency's exponent using half-to-even rounding (not truncation).
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
+/// The dimensionless ratio of `numerator` to `denominator` (`numerator / denominator`).
+///
+/// Ported nowhere in particular — this is the shared implementation behind every topic that
+/// reports a ratio of two `Money` amounts (e.g. an SROI ratio, a benefit-cost ratio).
+///
+/// # Panics
+///
+/// Panics if `denominator` is zero, or if the resulting ratio cannot be represented as an `f64`.
+///
+/// # Examples
+///
+/// ```
+/// use public_value::units::{iso, money_ratio, Money};
+/// use rust_decimal_macros::dec;
+///
+/// let outcomes = Money::from_decimal(dec!(359_070), iso::USD);
+/// let inputs = Money::from_decimal(dec!(250_000), iso::USD);
+/// let sroi = money_ratio(outcomes, inputs);
+/// assert!((sroi.value() - 1.436_28).abs() < 0.001);
+/// ```
+#[must_use]
+pub fn money_ratio(numerator: Money, denominator: Money) -> Ratio {
+    let ratio = *numerator.amount() / *denominator.amount();
+    Ratio::new(ratio.to_f64().expect("decimal ratio fits in f64"))
 }
 
 /// A dimensionless ratio, such as a social-return-on-investment ratio or a cost-effectiveness
@@ -226,26 +132,26 @@ impl fmt::Display for Percentage {
 
 #[cfg(test)]
 mod tests {
-    use super::{Money, Percentage, Ratio};
+    use super::{Percentage, Ratio, iso, money_ratio, Money};
     use rust_decimal_macros::dec;
 
     #[test]
     fn money_arithmetic() {
-        let a = Money::new(dec!(100));
-        let b = Money::new(dec!(40));
-        assert_eq!((a + b).value(), dec!(140));
-        assert_eq!((a - b).value(), dec!(60));
-        assert_eq!((a * dec!(2)).value(), dec!(200));
-        assert_eq!((a / dec!(2)).value(), dec!(50));
-        assert_eq!((a * 2_u32).value(), dec!(200));
-        assert_eq!((a / 2_u32).value(), dec!(50));
+        let a = Money::from_decimal(dec!(100), iso::USD);
+        let b = Money::from_decimal(dec!(40), iso::USD);
+        assert_eq!(*a.add(b).unwrap().amount(), dec!(140));
+        assert_eq!(*a.sub(b).unwrap().amount(), dec!(60));
+        assert_eq!(*a.mul(dec!(2)).unwrap().amount(), dec!(200));
+        assert_eq!(*a.div(dec!(2)).unwrap().amount(), dec!(50));
+        assert_eq!(*a.mul(2_u32).unwrap().amount(), dec!(200));
+        assert_eq!(*a.div(2_u32).unwrap().amount(), dec!(50));
     }
 
     #[test]
-    fn money_ratio_to() {
-        let outcomes = Money::new(dec!(510_000));
-        let inputs = Money::new(dec!(250_000));
-        let ratio: Ratio = outcomes.ratio_to(inputs);
+    fn money_ratio_computation() {
+        let outcomes = Money::from_decimal(dec!(510_000), iso::USD);
+        let inputs = Money::from_decimal(dec!(250_000), iso::USD);
+        let ratio: Ratio = money_ratio(outcomes, inputs);
         assert!((ratio.value() - 2.04).abs() < 0.001);
     }
 

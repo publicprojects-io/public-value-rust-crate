@@ -6,23 +6,23 @@ use public_value::philanthropy_metrics::{
     donor_return_on_investment, effective_altruism_cost_effectiveness, programme_ratio,
     standardized_reporting_mappings, units_produced, volunteer_time_value, BlendedValue,
 };
-use public_value::units::Money;
 use rust_decimal_macros::dec;
+use rusty_money::{Money, iso};
 
 /// `cost-per-outcome`: £450,000 / 630 households achieving food security ≈ £714.
 #[test]
 fn cost_per_outcome_food_bank() {
-    let cost = cost_per_outcome(Money::new(dec!(450_000)), 630);
-    assert_eq!(cost.value().round_dp(2), dec!(714.29));
+    let cost = cost_per_outcome(Money::from_decimal(dec!(450_000), iso::USD), 630);
+    assert_eq!(cost.amount().round_dp(2), dec!(714.29));
 }
 
 /// `cost-per-beneficiary`: £450,000 / 1,800 households served = £250, always ≤ cost per outcome
 /// for the same programme since the outcome population is a subset of the beneficiary population.
 #[test]
 fn cost_per_beneficiary_food_bank() {
-    let cost = cost_per_beneficiary(Money::new(dec!(450_000)), 1_800);
-    assert_eq!(cost.value(), dec!(250));
-    assert!(cost.value() <= cost_per_outcome(Money::new(dec!(450_000)), 630).value());
+    let cost = cost_per_beneficiary(Money::from_decimal(dec!(450_000), iso::USD), 1_800);
+    assert_eq!(*cost.amount(), dec!(250));
+    assert!(cost.lte(&cost_per_outcome(Money::from_decimal(dec!(450_000), iso::USD), 630)).unwrap());
 }
 
 /// `blended-value`: the loan-A-versus-loan-B worked example. A purely financial lens prefers loan B
@@ -31,13 +31,13 @@ fn cost_per_beneficiary_food_bank() {
 #[test]
 fn blended_value_loan_comparison() {
     let loan_a = BlendedValue::new(
-        Money::new(dec!(10_000)),
+        Money::from_decimal(dec!(10_000), iso::USD),
         "40 people placed into sustained work per year".to_owned(),
         "Neutral".to_owned(),
     );
-    let loan_b = BlendedValue::new(Money::new(dec!(30_000)), "None stated".to_owned(), "Neutral".to_owned());
+    let loan_b = BlendedValue::new(Money::from_decimal(dec!(30_000), iso::USD), "None stated".to_owned(), "Neutral".to_owned());
 
-    assert!(loan_a.economic_annual.value() < loan_b.economic_annual.value());
+    assert!(loan_a.economic_annual.lt(&loan_b.economic_annual).unwrap());
     assert_ne!(loan_a.social_line, loan_b.social_line);
 }
 
@@ -45,10 +45,10 @@ fn blended_value_loan_comparison() {
 /// worked example, roughly $4,500 per life saved, i.e. very roughly 20 lives saved per £100,000.
 #[test]
 fn effective_altruism_cost_effectiveness_amf() {
-    let cost_per_life = effective_altruism_cost_effectiveness(Money::new(dec!(4_500)), dec!(1));
-    assert_eq!(cost_per_life.value(), dec!(4_500));
+    let cost_per_life = effective_altruism_cost_effectiveness(Money::from_decimal(dec!(4_500), iso::USD), dec!(1));
+    assert_eq!(*cost_per_life.amount(), dec!(4_500));
 
-    let lives_per_100k = units_produced(Money::new(dec!(100_000)), cost_per_life);
+    let lives_per_100k = units_produced(Money::from_decimal(dec!(100_000), iso::USD), cost_per_life);
     assert!((lives_per_100k - 22.222_222).abs() < 0.001);
 }
 
@@ -56,8 +56,8 @@ fn effective_altruism_cost_effectiveness_amf() {
 /// overhead, funded evaluation and case management) — the ratio alone cannot distinguish them.
 #[test]
 fn charity_overhead_ratio_two_charities() {
-    let charity_a = charity_overhead_ratio(Money::new(dec!(80_000)), Money::new(dec!(1_000_000)));
-    let charity_b = charity_overhead_ratio(Money::new(dec!(220_000)), Money::new(dec!(1_000_000)));
+    let charity_a = charity_overhead_ratio(Money::from_decimal(dec!(80_000), iso::USD), Money::from_decimal(dec!(1_000_000), iso::USD));
+    let charity_b = charity_overhead_ratio(Money::from_decimal(dec!(220_000), iso::USD), Money::from_decimal(dec!(1_000_000), iso::USD));
 
     assert!((charity_a.as_percent() - 8.0).abs() < 0.001);
     assert!((charity_b.as_percent() - 22.0).abs() < 0.001);
@@ -69,8 +69,8 @@ fn charity_overhead_ratio_two_charities() {
 /// additional), for the same £5,000 gift.
 #[test]
 fn donor_roi_funding_constrained_vs_fully_funded() {
-    let roi_d = donor_return_on_investment(20.0, 0.0, Money::new(dec!(5_000)));
-    let roi_c = donor_return_on_investment(0.0, 0.0, Money::new(dec!(5_000)));
+    let roi_d = donor_return_on_investment(20.0, 0.0, Money::from_decimal(dec!(5_000), iso::USD));
+    let roi_c = donor_return_on_investment(0.0, 0.0, Money::from_decimal(dec!(5_000), iso::USD));
 
     assert!((roi_d - 0.004).abs() < 1e-6);
     assert!(roi_c.abs() < 1e-9);
@@ -91,9 +91,9 @@ fn grant_outcomes_reporting_combinatorial_reduction() {
 /// £72,150, which raises a £300,000 cash-spend charity's true resource cost by about 24%.
 #[test]
 fn volunteer_time_value_uk_national_average() {
-    let value = volunteer_time_value(dec!(5_000), Money::new(dec!(14.43)));
-    assert_eq!(value.value(), dec!(72150.00));
+    let value = volunteer_time_value(dec!(5_000), Money::from_decimal(dec!(14.43), iso::USD));
+    assert_eq!(*value.amount(), dec!(72150.00));
 
-    let true_cost = Money::new(dec!(300_000)) + value;
-    assert_eq!(true_cost.value(), dec!(372150.00));
+    let true_cost = Money::from_decimal(dec!(300_000), iso::USD).add(value).unwrap();
+    assert_eq!(*true_cost.amount(), dec!(372150.00));
 }

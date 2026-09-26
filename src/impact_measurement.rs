@@ -4,7 +4,7 @@
 
 use rust_decimal::Decimal;
 
-use crate::units::{Money, Percentage, Ratio};
+use crate::units::{Money, Percentage, Ratio, money_ratio};
 
 /// Applies a retained fraction (`1 − rate`) to a value — the shared shape behind social return on
 /// investment's deadweight, attribution, and drop-off adjustments, each of which multiplies the
@@ -21,19 +21,19 @@ use crate::units::{Money, Percentage, Ratio};
 ///
 /// ```
 /// use public_value::impact_measurement::value_net_of_rate;
-/// use public_value::units::{Money, Percentage};
+/// use public_value::units::{Money, Percentage, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// // SROI worked example: £510,000 gross, less 40% deadweight.
-/// let net_of_deadweight = value_net_of_rate(Money::new(dec!(510_000)), Percentage::from_percent(40.0));
-/// assert_eq!(net_of_deadweight.value().round_dp(2), dec!(306_000.0));
+/// let net_of_deadweight = value_net_of_rate(Money::from_decimal(dec!(510_000), iso::USD), Percentage::from_percent(40.0));
+/// assert_eq!(net_of_deadweight.amount().round_dp(2), dec!(306_000.0));
 /// ```
 #[must_use]
 pub fn value_net_of_rate(value: Money, rate: Percentage) -> Money {
     let retained_fraction = 1.0 - rate.as_fraction();
     let decimal_fraction =
         Decimal::from_f64_retain(retained_fraction).expect("finite retained fraction converts to Decimal");
-    value * decimal_fraction
+    value.mul(decimal_fraction).expect("multiplication overflow")
 }
 
 /// The SROI ratio: present value of impact divided by the value of inputs.
@@ -53,11 +53,11 @@ pub fn value_net_of_rate(value: Money, rate: Percentage) -> Money {
 /// ```
 /// use public_value::foundations::present_value;
 /// use public_value::impact_measurement::{sroi_ratio, value_net_of_rate};
-/// use public_value::units::{Money, Percentage};
+/// use public_value::units::{Money, Percentage, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// // Local authority employment programme: £250,000 input, 60 participants at £8,500/year proxy.
-/// let gross = Money::new(dec!(8_500)) * 60_u32;
+/// let gross = Money::from_decimal(dec!(8_500), iso::USD).mul(60_u32).unwrap();
 /// let year1_impact = value_net_of_rate(
 ///     value_net_of_rate(gross, Percentage::from_percent(40.0)), // deadweight
 ///     Percentage::from_percent(30.0),                           // attribution
@@ -67,13 +67,13 @@ pub fn value_net_of_rate(value: Money, rate: Percentage) -> Money {
 ///     dec!(0.035),
 ///     1,
 /// );
-/// let total_impact = year1_impact + year2_impact;
-/// let ratio = sroi_ratio(total_impact, Money::new(dec!(250_000)));
+/// let total_impact = year1_impact.add(year2_impact).unwrap();
+/// let ratio = sroi_ratio(total_impact, Money::from_decimal(dec!(250_000), iso::USD));
 /// assert!((ratio.value() - 1.436).abs() < 0.01);
 /// ```
 #[must_use]
 pub fn sroi_ratio(present_value_of_impact: Money, value_of_inputs: Money) -> Ratio {
-    present_value_of_impact.ratio_to(value_of_inputs)
+    money_ratio(present_value_of_impact, value_of_inputs)
 }
 
 /// One link in a backward-mapped causal chain: a precondition, the assumption connecting it to the
@@ -233,17 +233,17 @@ pub fn attributable_outcome_count(population: u32, net_uplift: Percentage) -> f6
 ///
 /// ```
 /// use public_value::impact_measurement::proportional_social_value_score;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// // A £2m IT contract with a 10-point social value weighting; the strongest bid monetizes
 /// // £90,000 of social value, this bid £40,000.
-/// let score = proportional_social_value_score(Money::new(dec!(40_000)), Money::new(dec!(90_000)), 10.0);
+/// let score = proportional_social_value_score(Money::from_decimal(dec!(40_000), iso::USD), Money::from_decimal(dec!(90_000), iso::USD), 10.0);
 /// assert!((score - 4.44).abs() < 0.01);
 /// ```
 #[must_use]
 pub fn proportional_social_value_score(bid_value: Money, strongest_bid_value: Money, max_points: f64) -> f64 {
-    max_points * bid_value.ratio_to(strongest_bid_value).value()
+    max_points * money_ratio(bid_value, strongest_bid_value).value()
 }
 
 /// The applied value of an outcome, using a published unit cost database proxy: outcomes achieved
@@ -251,20 +251,24 @@ pub fn proportional_social_value_score(bid_value: Money, strongest_bid_value: Mo
 ///
 /// Ported from `unit-cost-databases`.
 ///
+/// # Panics
+///
+/// Panics if the multiplication overflows.
+///
 /// # Examples
 ///
 /// ```
 /// use public_value::impact_measurement::applied_unit_cost_value;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// // Befriending service: 80 beneficiaries at an illustrative £1,100/person/year loneliness proxy.
-/// let value = applied_unit_cost_value(80, Money::new(dec!(1_100)));
-/// assert_eq!(value.value(), dec!(88_000));
+/// let value = applied_unit_cost_value(80, Money::from_decimal(dec!(1_100), iso::USD));
+/// assert_eq!(*value.amount(), dec!(88_000));
 /// ```
 #[must_use]
 pub fn applied_unit_cost_value(outcomes_achieved: u32, unit_proxy_value: Money) -> Money {
-    unit_proxy_value * outcomes_achieved
+    unit_proxy_value.mul(outcomes_achieved).expect("multiplication overflow")
 }
 
 /// A difference-in-differences impact estimate, re-exported here under the name

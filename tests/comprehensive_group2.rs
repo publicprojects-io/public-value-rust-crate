@@ -7,8 +7,9 @@ use public_value::economic_appraisal::{
     net_present_social_value, net_social_benefit_per_hour, shadow_carbon_benefit, shadow_wage_rate,
     travel_cost_annual_value, weighted_score, wellbys, FiveCaseModel,
 };
-use public_value::units::Money;
+use public_value::units::money_ratio;
 use rust_decimal_macros::dec;
+use rusty_money::{Money, iso};
 
 /// `green-book-appraisal`: a strong economic case does not excuse failing the commercial case.
 #[test]
@@ -37,13 +38,14 @@ fn five_case_model_single_tender_supplier() {
 #[test]
 fn social_cost_benefit_analysis_cycling_network() {
     let factor = annuity_factor(dec!(0.035), 20);
-    let cost_pv = Money::new(dec!(3_000_000)) + Money::new(dec!(50_000)) * factor;
-    let benefit_pv = Money::new(dec!(280_000)) * factor;
+    let maintenance_pv = Money::from_decimal(dec!(50_000), iso::USD).mul(factor).unwrap();
+    let cost_pv = Money::from_decimal(dec!(3_000_000), iso::USD).add(maintenance_pv).unwrap();
+    let benefit_pv = Money::from_decimal(dec!(280_000), iso::USD).mul(factor).unwrap();
 
     let npsv = net_present_social_value(benefit_pv, cost_pv);
     let bcr = benefit_cost_ratio(benefit_pv, cost_pv);
 
-    assert!((npsv.value() - dec!(268_852)).abs() < dec!(1_000));
+    assert!((npsv.amount() - dec!(268_852)).abs() < dec!(1_000));
     assert!((bcr.value() - 1.072).abs() < 0.01);
 }
 
@@ -52,22 +54,22 @@ fn social_cost_benefit_analysis_cycling_network() {
 /// step from Hostel to Housing First.
 #[test]
 fn cost_effectiveness_rough_sleeping_options() {
-    let housing_first = cost_effectiveness_ratio(Money::new(dec!(900_000)), 60);
-    let hostel = cost_effectiveness_ratio(Money::new(dec!(600_000)), 50);
-    let outreach = cost_effectiveness_ratio(Money::new(dec!(350_000)), 20);
+    let housing_first = cost_effectiveness_ratio(Money::from_decimal(dec!(900_000), iso::USD), 60);
+    let hostel = cost_effectiveness_ratio(Money::from_decimal(dec!(600_000), iso::USD), 50);
+    let outreach = cost_effectiveness_ratio(Money::from_decimal(dec!(350_000), iso::USD), 20);
 
-    assert_eq!(housing_first.value(), dec!(15_000));
-    assert_eq!(hostel.value(), dec!(12_000));
-    assert_eq!(outreach.value(), dec!(17_500));
+    assert_eq!(*housing_first.amount(), dec!(15_000));
+    assert_eq!(*hostel.amount(), dec!(12_000));
+    assert_eq!(*outreach.amount(), dec!(17_500));
 
     let icer_hostel_vs_outreach =
-        incremental_cost_effectiveness_ratio(Money::new(dec!(600_000)), 50, Money::new(dec!(350_000)), 20);
+        incremental_cost_effectiveness_ratio(Money::from_decimal(dec!(600_000), iso::USD), 50, Money::from_decimal(dec!(350_000), iso::USD), 20);
     let icer_housing_first_vs_hostel =
-        incremental_cost_effectiveness_ratio(Money::new(dec!(900_000)), 60, Money::new(dec!(600_000)), 50);
+        incremental_cost_effectiveness_ratio(Money::from_decimal(dec!(900_000), iso::USD), 60, Money::from_decimal(dec!(600_000), iso::USD), 50);
 
-    assert!((icer_hostel_vs_outreach.value() - dec!(8333.33)).abs() < dec!(1));
-    assert_eq!(icer_housing_first_vs_hostel.value(), dec!(30_000));
-    assert!(icer_hostel_vs_outreach.value() < icer_housing_first_vs_hostel.value());
+    assert!((icer_hostel_vs_outreach.amount() - dec!(8333.33)).abs() < dec!(1));
+    assert_eq!(*icer_housing_first_vs_hostel.amount(), dec!(30_000));
+    assert!(icer_hostel_vs_outreach.lt(&icer_housing_first_vs_hostel).unwrap());
 }
 
 /// `multi-criteria-decision-analysis`: the recycling-centre site-selection worked example. Site C
@@ -92,10 +94,10 @@ fn wellbeing_valuation_befriending_scheme() {
     let total = wellbys(400, 0.7, 2.0);
     assert!((total - 560.0).abs() < 1e-9);
 
-    let value = monetize_wellbys(total, Money::new(dec!(13_000)));
-    assert_eq!(value.value(), dec!(7_280_000));
+    let value = monetize_wellbys(total, Money::from_decimal(dec!(13_000), iso::USD));
+    assert_eq!(*value.amount(), dec!(7_280_000));
 
-    let bcr = value.ratio_to(Money::new(dec!(450_000)));
+    let bcr = money_ratio(value, Money::from_decimal(dec!(450_000), iso::USD));
     assert!((bcr.value() - 16.18).abs() < 0.1);
 }
 
@@ -103,39 +105,39 @@ fn wellbeing_valuation_befriending_scheme() {
 /// aggregating to £9.52m/year and ≈£135m over 20 years at 3.5%.
 #[test]
 fn stated_preference_water_quality() {
-    let aggregate = aggregate_stated_preference_value(Money::new(dec!(28)), 340_000);
-    assert_eq!(aggregate.value(), dec!(9_520_000));
+    let aggregate = aggregate_stated_preference_value(Money::from_decimal(dec!(28), iso::USD), 340_000);
+    assert_eq!(*aggregate.amount(), dec!(9_520_000));
 
     let factor = annuity_factor(dec!(0.035), 20);
-    let pv = aggregate * factor;
-    assert!((pv.value() - dec!(135_302_079)).abs() < dec!(500_000));
+    let pv = aggregate.mul(factor).unwrap();
+    assert!((pv.amount() - dec!(135_302_079)).abs() < dec!(500_000));
 }
 
 /// `revealed-preference-valuation`: the aircraft-noise hedonic worked example (£75.6m aggregate
 /// cost) and the nature-reserve travel-cost worked example (£920,000/year).
 #[test]
 fn revealed_preference_examples() {
-    let implicit_price = hedonic_implicit_price(Money::new(dec!(280_000)), 0.005);
-    assert_eq!(implicit_price.value().round_dp(2), dec!(1_400));
+    let implicit_price = hedonic_implicit_price(Money::from_decimal(dec!(280_000), iso::USD), 0.005);
+    assert_eq!(implicit_price.amount().round_dp(2), dec!(1_400));
 
-    let aggregate_noise_cost = implicit_price * dec!(3) * 18_000_u32;
-    assert_eq!(aggregate_noise_cost.value().round_dp(2), dec!(75_600_000));
+    let aggregate_noise_cost = implicit_price.mul(dec!(3)).unwrap().mul(18_000_u32).unwrap();
+    assert_eq!(aggregate_noise_cost.amount().round_dp(2), dec!(75_600_000));
 
-    let value = travel_cost_annual_value(40_000, Money::new(dec!(14)), Money::new(dec!(9)));
-    assert_eq!(value.value(), dec!(920_000));
+    let value = travel_cost_annual_value(40_000, Money::from_decimal(dec!(14), iso::USD), Money::from_decimal(dec!(9), iso::USD));
+    assert_eq!(*value.amount(), dec!(920_000));
 }
 
 /// `shadow-pricing`: the flood-defence carbon-benefit worked example (£112,000) and the
 /// employment-programme shadow-wage worked example (£4.40/hour net social benefit).
 #[test]
 fn shadow_pricing_examples() {
-    let carbon_benefit = shadow_carbon_benefit(400, Money::new(dec!(280)));
-    assert_eq!(carbon_benefit.value(), dec!(112_000));
+    let carbon_benefit = shadow_carbon_benefit(400, Money::from_decimal(dec!(280), iso::USD));
+    assert_eq!(*carbon_benefit.amount(), dec!(112_000));
 
-    let market_wage = Money::new(dec!(11.00));
+    let market_wage = Money::from_decimal(dec!(11.00), iso::USD);
     let shadow_wage = shadow_wage_rate(market_wage, dec!(0.6));
     let net_benefit = net_social_benefit_per_hour(market_wage, shadow_wage);
 
-    assert_eq!(shadow_wage.value(), dec!(6.600));
-    assert_eq!(net_benefit.value(), dec!(4.400));
+    assert_eq!(*shadow_wage.amount(), dec!(6.600));
+    assert_eq!(*net_benefit.amount(), dec!(4.400));
 }

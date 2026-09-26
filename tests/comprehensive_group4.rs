@@ -7,8 +7,9 @@ use public_value::performance_metrics::{
     payment_by_results_total, productivity_growth_percentage_points, quality_adjusted_output_index,
     LegitimacyTriangulation, PerformanceAccountability, PublicValueScorecard,
 };
-use public_value::units::{Money, Percentage};
+use public_value::units::Percentage;
 use rust_decimal_macros::dec;
+use rusty_money::{Money, iso};
 
 /// `public-sector-kpis`: the ambulance trust worked example, 75.0% headline KPI.
 #[test]
@@ -24,8 +25,8 @@ fn public_value_scorecard_reablement_service() {
     let reablement_service = PublicValueScorecard {
         mission_outcome_rate: Percentage::from_percent(68.0),
         mission_outcome_target: Percentage::from_percent(65.0),
-        stewardship_cost_per_episode: Money::new(dec!(1_850)),
-        stewardship_budgeted_cost_per_episode: Money::new(dec!(2_000)),
+        stewardship_cost_per_episode: Money::from_decimal(dec!(1_850), iso::USD),
+        stewardship_budgeted_cost_per_episode: Money::from_decimal(dec!(2_000), iso::USD),
         process_staff_vacancy_rate: Percentage::from_percent(14.0),
         process_caseload: 23,
         process_safe_caseload_ceiling: 25,
@@ -51,19 +52,19 @@ fn outcomes_based_accountability_employment_programme() {
     assert!(programme.met_activity_target());
     assert!((programme.better_off_uplift().as_percent() - 25.7).abs() < 0.1);
 
-    let cost_per_completer = cost_effectiveness_ratio(Money::new(dec!(340_000)), 390);
-    assert!((cost_per_completer.value() - dec!(872)).abs() < dec!(1));
+    let cost_per_completer = cost_effectiveness_ratio(Money::from_decimal(dec!(340_000), iso::USD), 390);
+    assert!((cost_per_completer.amount() - dec!(872)).abs() < dec!(1));
 }
 
 /// `payment-by-results-and-social-impact-bonds`: the family-intervention contract worked example,
 /// £1,376,000 total for 96 confirmed sustained outcomes.
 #[test]
 fn payment_by_results_family_intervention() {
-    let total = payment_by_results_total(200, Money::new(dec!(4_000)), 96, Money::new(dec!(6_000)));
-    assert_eq!(total.value(), dec!(1_376_000));
+    let total = payment_by_results_total(200, Money::from_decimal(dec!(4_000), iso::USD), 96, Money::from_decimal(dec!(6_000), iso::USD));
+    assert_eq!(*total.amount(), dec!(1_376_000));
 
     let cost_per_outcome = cost_effectiveness_ratio(total, 96);
-    assert!((cost_per_outcome.value() - dec!(14_333)).abs() < dec!(1));
+    assert!((cost_per_outcome.amount() - dec!(14_333)).abs() < dec!(1));
 }
 
 /// `public-service-productivity`: the illustrative NHS acute-sector worked example, productivity
@@ -91,22 +92,22 @@ fn citizen_satisfaction_council_tax_ebilling() {
 /// £132,000/year.
 #[test]
 fn service_standards_licence_renewal() {
-    let take_up_shift = channel_shift_saving(2_000_000, Percentage::from_percent(25.0), Money::new(dec!(3.00)), Money::new(dec!(0.30)));
-    assert_eq!(take_up_shift.value().round_dp(2), dec!(1_350_000.00));
+    let take_up_shift = channel_shift_saving(2_000_000, Percentage::from_percent(25.0), Money::from_decimal(dec!(3.00), iso::USD), Money::from_decimal(dec!(0.30), iso::USD));
+    assert_eq!(take_up_shift.amount().round_dp(2), dec!(1_350_000.00));
 
-    let before = failure_demand_cost(700_000, Percentage::from_percent(80.0), Money::new(dec!(3.00)));
-    let after = failure_demand_cost(1_200_000, Percentage::from_percent(92.0), Money::new(dec!(3.00)));
-    assert_eq!(before.value().round_dp(2), dec!(420_000.00));
-    assert_eq!(after.value().round_dp(2), dec!(288_000.00));
+    let before = failure_demand_cost(700_000, Percentage::from_percent(80.0), Money::from_decimal(dec!(3.00), iso::USD));
+    let after = failure_demand_cost(1_200_000, Percentage::from_percent(92.0), Money::from_decimal(dec!(3.00), iso::USD));
+    assert_eq!(before.amount().round_dp(2), dec!(420_000.00));
+    assert_eq!(after.amount().round_dp(2), dec!(288_000.00));
 
-    let net_failure_demand_saving = before - after;
-    assert_eq!(net_failure_demand_saving.value().round_dp(2), dec!(132_000.00));
+    let net_failure_demand_saving = before.sub(after).unwrap();
+    assert_eq!(net_failure_demand_saving.amount().round_dp(2), dec!(132_000.00));
 
-    let total_saving = take_up_shift + net_failure_demand_saving;
-    assert_eq!(total_saving.value().round_dp(2), dec!(1_482_000.00));
+    let total_saving = take_up_shift.add(net_failure_demand_saving).unwrap();
+    assert_eq!(total_saving.amount().round_dp(2), dec!(1_482_000.00));
 
-    let cost_per_txn = cost_per_transaction(Money::new(dec!(600_000)), 2_000_000);
-    assert_eq!(cost_per_txn.value(), dec!(0.3));
+    let cost_per_txn = cost_per_transaction(Money::from_decimal(dec!(600_000), iso::USD), 2_000_000);
+    assert_eq!(*cost_per_txn.amount(), dec!(0.3));
 }
 
 /// `trust-and-legitimacy-metrics`: the national tax authority worked example. Trust falling,

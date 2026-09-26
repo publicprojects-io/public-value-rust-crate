@@ -5,7 +5,7 @@
 use rust_decimal::Decimal;
 use rust_decimal::prelude::ToPrimitive;
 
-use crate::units::{Money, Percentage};
+use crate::units::{Money, Percentage, money_ratio};
 
 /// Cost per outcome: total programme cost divided by the number of beneficiaries who achieved the
 /// defined outcome (not merely received a service).
@@ -23,15 +23,15 @@ use crate::units::{Money, Percentage};
 ///
 /// ```
 /// use public_value::philanthropy_metrics::cost_per_outcome;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
-/// let cost = cost_per_outcome(Money::new(dec!(450_000)), 630);
-/// assert_eq!(cost.value().round_dp(2), dec!(714.29));
+/// let cost = cost_per_outcome(Money::from_decimal(dec!(450_000), iso::USD), 630);
+/// assert_eq!(cost.amount().round_dp(2), dec!(714.29));
 /// ```
 #[must_use]
 pub fn cost_per_outcome(total_programme_cost: Money, beneficiaries_achieving_outcome: u32) -> Money {
-    total_programme_cost / beneficiaries_achieving_outcome
+    total_programme_cost.div(beneficiaries_achieving_outcome).expect("division by zero or overflow")
 }
 
 /// Cost per beneficiary: total programme cost divided by the number of unique people served,
@@ -48,15 +48,15 @@ pub fn cost_per_outcome(total_programme_cost: Money, beneficiaries_achieving_out
 ///
 /// ```
 /// use public_value::philanthropy_metrics::cost_per_beneficiary;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
-/// let cost = cost_per_beneficiary(Money::new(dec!(450_000)), 1_800);
-/// assert_eq!(cost.value(), dec!(250));
+/// let cost = cost_per_beneficiary(Money::from_decimal(dec!(450_000), iso::USD), 1_800);
+/// assert_eq!(*cost.amount(), dec!(250));
 /// ```
 #[must_use]
 pub fn cost_per_beneficiary(total_programme_cost: Money, unique_people_served: u32) -> Money {
-    total_programme_cost / unique_people_served
+    total_programme_cost.div(unique_people_served).expect("division by zero or overflow")
 }
 
 /// Jed Emerson's blended value framework: every unit of capital deployed produces an economic, a
@@ -104,16 +104,16 @@ impl BlendedValue {
 ///
 /// ```
 /// use public_value::philanthropy_metrics::effective_altruism_cost_effectiveness;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// // GiveWell's published Against Malaria Foundation worked example: roughly $4,500 per life saved.
-/// let cost = effective_altruism_cost_effectiveness(Money::new(dec!(4_500)), dec!(1));
-/// assert_eq!(cost.value(), dec!(4_500));
+/// let cost = effective_altruism_cost_effectiveness(Money::from_decimal(dec!(4_500), iso::USD), dec!(1));
+/// assert_eq!(*cost.amount(), dec!(4_500));
 /// ```
 #[must_use]
 pub fn effective_altruism_cost_effectiveness(intervention_cost: Money, units_of_good: Decimal) -> Money {
-    intervention_cost / units_of_good
+    intervention_cost.div(units_of_good).expect("division by zero or overflow")
 }
 
 /// Units of good produced by a budget at a given cost per unit — the inverse of
@@ -128,16 +128,16 @@ pub fn effective_altruism_cost_effectiveness(intervention_cost: Money, units_of_
 ///
 /// ```
 /// use public_value::philanthropy_metrics::units_produced;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// // roughly 20 lives saved per £100,000 at $4,500/life, per GiveWell's worked example.
-/// let lives = units_produced(Money::new(dec!(100_000)), Money::new(dec!(4_500)));
+/// let lives = units_produced(Money::from_decimal(dec!(100_000), iso::USD), Money::from_decimal(dec!(4_500), iso::USD));
 /// assert!((lives - 22.222_222).abs() < 0.001);
 /// ```
 #[must_use]
 pub fn units_produced(budget: Money, cost_per_unit: Money) -> f64 {
-    budget.ratio_to(cost_per_unit).value()
+    money_ratio(budget, cost_per_unit).value()
 }
 
 /// The charity overhead ratio: administrative and fundraising expenditure as a fraction of total
@@ -157,15 +157,15 @@ pub fn units_produced(budget: Money, cost_per_unit: Money) -> f64 {
 ///
 /// ```
 /// use public_value::philanthropy_metrics::charity_overhead_ratio;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
-/// let ratio = charity_overhead_ratio(Money::new(dec!(220_000)), Money::new(dec!(1_000_000)));
+/// let ratio = charity_overhead_ratio(Money::from_decimal(dec!(220_000), iso::USD), Money::from_decimal(dec!(1_000_000), iso::USD));
 /// assert!((ratio.as_percent() - 22.0).abs() < 0.001);
 /// ```
 #[must_use]
 pub fn charity_overhead_ratio(administrative_and_fundraising_cost: Money, total_expenditure: Money) -> Percentage {
-    let ratio = administrative_and_fundraising_cost.ratio_to(total_expenditure);
+    let ratio = money_ratio(administrative_and_fundraising_cost, total_expenditure);
     Percentage::from_fraction(ratio.value())
 }
 
@@ -203,17 +203,17 @@ pub fn programme_ratio(overhead_ratio: Percentage) -> Percentage {
 ///
 /// ```
 /// use public_value::philanthropy_metrics::donor_return_on_investment;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// // Charity D: a funding-constrained programme where the marginal £5,000 buys 20 additional
 /// // people served (at the charity's own £250 cost per beneficiary) that would not otherwise be
 /// // served.
-/// let roi = donor_return_on_investment(20.0, 0.0, Money::new(dec!(5_000)));
+/// let roi = donor_return_on_investment(20.0, 0.0, Money::from_decimal(dec!(5_000), iso::USD));
 /// assert!((roi - 0.004).abs() < 1e-6);
 ///
 /// // Charity C: fully funded already, so the marginal gift is not additional.
-/// let roi_c = donor_return_on_investment(0.0, 0.0, Money::new(dec!(5_000)));
+/// let roi_c = donor_return_on_investment(0.0, 0.0, Money::from_decimal(dec!(5_000), iso::USD));
 /// assert!((roi_c).abs() < 1e-9);
 /// assert!(roi > roi_c);
 /// ```
@@ -221,9 +221,9 @@ pub fn programme_ratio(overhead_ratio: Percentage) -> Percentage {
 pub fn donor_return_on_investment(outcome_with_gift: f64, counterfactual_outcome: f64, gift: Money) -> f64 {
     let additional_outcome = outcome_with_gift - counterfactual_outcome;
     // The numerator is an outcome count, not a monetary amount, so this divides by the gift's raw
-    // decimal value converted to `f64` rather than via `Money::ratio_to` (which divides two
+    // decimal value converted to `f64` rather than via `units::money_ratio` (which divides two
     // `Money` values into a `Ratio`).
-    let gift_value = gift.value().to_f64().unwrap_or(f64::NAN);
+    let gift_value = gift.amount().to_f64().unwrap_or(f64::NAN);
     additional_outcome / gift_value
 }
 
@@ -271,18 +271,22 @@ pub fn standardized_reporting_mappings(funders: u32, grantees: u32) -> u32 {
 /// or the US Independent Sector's $36.14/hour) that can differ by a large multiple for the same
 /// hour, so any reported figure must state which rate produced it.
 ///
+/// # Panics
+///
+/// Panics if the multiplication overflows.
+///
 /// # Examples
 ///
 /// ```
 /// use public_value::philanthropy_metrics::volunteer_time_value;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// // UK charity, ONS national-average replacement-cost rate.
-/// let value = volunteer_time_value(dec!(5_000), Money::new(dec!(14.43)));
-/// assert_eq!(value.value(), dec!(72150.00));
+/// let value = volunteer_time_value(dec!(5_000), Money::from_decimal(dec!(14.43), iso::USD));
+/// assert_eq!(*value.amount(), dec!(72150.00));
 /// ```
 #[must_use]
 pub fn volunteer_time_value(hours: Decimal, hourly_rate: Money) -> Money {
-    hourly_rate * hours
+    hourly_rate.mul(hours).expect("multiplication overflow")
 }

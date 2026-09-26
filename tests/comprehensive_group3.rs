@@ -8,27 +8,28 @@ use public_value::impact_measurement::{
     proportional_social_value_score, sroi_ratio, value_net_of_rate, CausalLink, CombinedDiagnosis,
     LogicModel, TheoryOfChange,
 };
-use public_value::units::{Money, Percentage};
+use public_value::units::Percentage;
 use rust_decimal_macros::dec;
+use rusty_money::{Money, iso};
 
 /// `social-return-on-investment`: the local authority employment programme worked example, SROI
 /// ratio ≈ 1.44.
 #[test]
 fn sroi_employment_programme() {
-    let gross = Money::new(dec!(8_500)) * 60_u32;
-    assert_eq!(gross.value(), dec!(510_000));
+    let gross = Money::from_decimal(dec!(8_500), iso::USD).mul(60_u32).unwrap();
+    assert_eq!(*gross.amount(), dec!(510_000));
 
     let year1_impact = value_net_of_rate(
         value_net_of_rate(gross, Percentage::from_percent(40.0)),
         Percentage::from_percent(30.0),
     );
-    assert_eq!(year1_impact.value().round_dp(2), dec!(214_200.00));
+    assert_eq!(year1_impact.amount().round_dp(2), dec!(214_200.00));
 
     let year2_impact = present_value(value_net_of_rate(year1_impact, Percentage::from_percent(30.0)), dec!(0.035), 1);
-    assert!((year2_impact.value().round_dp(0) - dec!(144_870)).abs() <= dec!(1));
+    assert!((year2_impact.amount().round_dp(0) - dec!(144_870)).abs() <= dec!(1));
 
-    let total_impact = year1_impact + year2_impact;
-    let ratio = sroi_ratio(total_impact, Money::new(dec!(250_000)));
+    let total_impact = year1_impact.add(year2_impact).unwrap();
+    let ratio = sroi_ratio(total_impact, Money::from_decimal(dec!(250_000), iso::USD));
     assert!((ratio.value() - 1.436).abs() < 0.01);
 }
 
@@ -92,9 +93,9 @@ fn outcomes_vs_outputs_employment_support() {
 /// Bidder B scores ≈4.4.
 #[test]
 fn social_value_act_it_contract() {
-    let strongest_bid = Money::new(dec!(90_000));
+    let strongest_bid = Money::from_decimal(dec!(90_000), iso::USD);
     let score_for_strongest = proportional_social_value_score(strongest_bid, strongest_bid, 10.0);
-    let score_for_weaker = proportional_social_value_score(Money::new(dec!(40_000)), strongest_bid, 10.0);
+    let score_for_weaker = proportional_social_value_score(Money::from_decimal(dec!(40_000), iso::USD), strongest_bid, 10.0);
 
     assert!((score_for_strongest - 10.0).abs() < 0.01);
     assert!((score_for_weaker - 4.44).abs() < 0.01);
@@ -103,11 +104,11 @@ fn social_value_act_it_contract() {
 /// `unit-cost-databases`: the befriending-service and job-club worked examples.
 #[test]
 fn unit_cost_databases_examples() {
-    let loneliness_value = applied_unit_cost_value(80, Money::new(dec!(1_100)));
-    let employment_value = applied_unit_cost_value(45, Money::new(dec!(8_500)));
+    let loneliness_value = applied_unit_cost_value(80, Money::from_decimal(dec!(1_100), iso::USD));
+    let employment_value = applied_unit_cost_value(45, Money::from_decimal(dec!(8_500), iso::USD));
 
-    assert_eq!(loneliness_value.value(), dec!(88_000));
-    assert_eq!(employment_value.value(), dec!(382_500));
+    assert_eq!(*loneliness_value.amount(), dec!(88_000));
+    assert_eq!(*employment_value.amount(), dec!(382_500));
 }
 
 /// `impact-evaluation-methods`: the troubled-families difference-in-differences worked example

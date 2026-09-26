@@ -13,18 +13,20 @@ but don't implement. See [`spec/topics.md`](spec/topics.md#extensions-beyond-the
 
 ```toml
 [dependencies]
-public-value = "0.1"
+public-value = "0.3"
+rusty-money = "0.5"
+rust_decimal_macros = "1"
 ```
 
 ## Quick start
 
 ```rust
 use public_value::philanthropy_metrics::cost_per_outcome;
-use public_value::units::Money;
 use rust_decimal_macros::dec;
+use rusty_money::{iso, Money};
 
 // £450,000 spent; 630 households achieved food security (not just received a food parcel).
-let cost = cost_per_outcome(Money::new(dec!(450_000)), 630);
+let cost = cost_per_outcome(Money::from_decimal(dec!(450_000), iso::USD), 630);
 println!("Cost per outcome: {cost}"); // $714.29
 ```
 
@@ -113,7 +115,7 @@ units these formulas reference but don't implement: `qaly`/`clears_qaly_threshol
 ## Testing this crate
 
 ```sh
-cargo test                          # unit + integration + 108 doctests
+cargo test                          # unit + integration + 107 doctests
 cargo clippy --all-targets -- -D warnings
 cargo doc --no-deps --open
 ```

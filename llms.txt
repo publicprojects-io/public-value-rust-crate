@@ -11,8 +11,8 @@
 > connections the source topics reference but don't implement — see spec/topics.md's "Extensions"
 > section.
 
-Money, Ratio, and Percentage are typed newtypes, not plain `f64` — `Money` is backed by
-`rusty_money::Money` for exact decimal arithmetic, with every value tagged to a single fixed
+Ratio and Percentage are typed newtypes, not plain `f64`. `Money` is `rusty_money::Money` used
+directly (not wrapped) for exact decimal arithmetic, with every value tagged to a single fixed
 internal working currency (`USD`) so amounts built anywhere in the crate can always be combined.
 Every public function is `#[must_use]` and documented; `#![deny(missing_docs)]` and
 `#![deny(clippy::pedantic)]` are enforced crate-wide.
@@ -31,7 +31,8 @@ Every public function is `#[must_use]` and documented; `#![deny(missing_docs)]` 
 
 ## Modules
 
-- [`units`](src/units.rs): the shared `Money`/`Ratio`/`Percentage` newtypes every other module uses.
+- [`units`](src/units.rs): the shared `Money` (a `rusty_money::Money` alias), `Ratio`, and
+  `Percentage` types every other module uses.
 - [`foundations`](src/foundations.rs): public value foundations (the strategic triangle, value for
   money, opportunity cost, the social discount rate, distributional weighting, deadweight,
   displacement, counterfactual analysis).

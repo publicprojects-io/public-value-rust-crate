@@ -6,7 +6,7 @@ use rust_decimal::Decimal;
 
 use crate::economic_appraisal::annuity_factor;
 use crate::foundations::discount_factor;
-use crate::units::{Money, Percentage};
+use crate::units::{CURRENCY_INVARIANT, Money, Percentage};
 
 /// The Genuine Progress Indicator (GPI): personal consumption plus non-market benefits GDP omits,
 /// minus defensive/social costs and capital-depletion costs GDP wrongly counts as positive.
@@ -17,18 +17,22 @@ use crate::units::{Money, Percentage};
 ///
 /// ```
 /// use public_value::societal_indicators::genuine_progress_indicator;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// // Region: $50bn consumption, +$12bn non-market benefits, −$3bn/−$4bn/−$6bn costs.
 /// let gpi = genuine_progress_indicator(
-///     Money::new(dec!(50)),
-///     Money::new(dec!(12)),
-///     Money::new(dec!(3)) + Money::new(dec!(4)),
-///     Money::new(dec!(6)),
+///     Money::from_decimal(dec!(50), iso::USD),
+///     Money::from_decimal(dec!(12), iso::USD),
+///     Money::from_decimal(dec!(3), iso::USD).add(Money::from_decimal(dec!(4), iso::USD)).unwrap(),
+///     Money::from_decimal(dec!(6), iso::USD),
 /// );
-/// assert_eq!(gpi.value(), dec!(49));
+/// assert_eq!(*gpi.amount(), dec!(49));
 /// ```
+///
+/// # Panics
+///
+/// Panics if the four amounts are not in the same currency (not reachable within this crate).
 #[must_use]
 pub fn genuine_progress_indicator(
     personal_consumption: Money,
@@ -36,7 +40,13 @@ pub fn genuine_progress_indicator(
     defensive_and_social_costs: Money,
     depletion_costs: Money,
 ) -> Money {
-    personal_consumption + non_market_benefits - defensive_and_social_costs - depletion_costs
+    personal_consumption
+        .add(non_market_benefits)
+        .expect(CURRENCY_INVARIANT)
+        .sub(defensive_and_social_costs)
+        .expect(CURRENCY_INVARIANT)
+        .sub(depletion_costs)
+        .expect(CURRENCY_INVARIANT)
 }
 
 /// Whether a person clears Bhutan's Gross National Happiness "sufficiency" bar: sufficient in at
@@ -248,18 +258,18 @@ pub fn social_capital_pillar_gap(local_reading: Percentage, national_average: Pe
 /// ```
 /// use public_value::economic_appraisal::annuity_factor;
 /// use public_value::societal_indicators::ecosystem_asset_value;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// // Urban woodland: 80,000 recreational visits/year at £3/visit, 50-year horizon, 3.5% discount
 /// // rate.
-/// let annual_value = Money::new(dec!(3)) * 80_000_u32;
+/// let annual_value = Money::from_decimal(dec!(3), iso::USD).mul(80_000_u32).unwrap();
 /// let asset_value = ecosystem_asset_value(annual_value, dec!(0.035), 50);
-/// assert!((asset_value.value() - dec!(5_629_348)).abs() < dec!(1_000));
+/// assert!((asset_value.amount() - dec!(5_629_348)).abs() < dec!(1_000));
 /// ```
 #[must_use]
 pub fn ecosystem_asset_value(annual_service_flow_value: Money, annual_rate: Decimal, years: u32) -> Money {
-    annual_service_flow_value * annuity_factor(annual_rate, years)
+    annual_service_flow_value.mul(annuity_factor(annual_rate, years)).expect("multiplication overflow")
 }
 
 /// The present value of a future sum discounted across several successive rate bands (a
@@ -277,13 +287,13 @@ pub fn ecosystem_asset_value(annual_service_flow_value: Money, annual_rate: Deci
 ///
 /// ```
 /// use public_value::societal_indicators::present_value_across_schedule;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// // £1 of harm avoided in 100 years, under the Green Book's declining schedule (3.5% for years
 /// // 1–30, 3.0% for years 31–75, 2.5% for years 76–100).
-/// let pv = present_value_across_schedule(Money::new(dec!(1)), &[(dec!(0.035), 30), (dec!(0.03), 45), (dec!(0.025), 25)]);
-/// assert!((pv.value() - dec!(0.0508)).abs() < dec!(0.001));
+/// let pv = present_value_across_schedule(Money::from_decimal(dec!(1), iso::USD), &[(dec!(0.035), 30), (dec!(0.03), 45), (dec!(0.025), 25)]);
+/// assert!((pv.amount() - dec!(0.0508)).abs() < dec!(0.001));
 /// ```
 #[must_use]
 pub fn present_value_across_schedule(future_value: Money, rate_year_bands: &[(Decimal, u32)]) -> Money {
@@ -291,7 +301,7 @@ pub fn present_value_across_schedule(future_value: Money, rate_year_bands: &[(De
     for &(rate, years) in rate_year_bands {
         combined_factor *= discount_factor(rate, years);
     }
-    future_value / combined_factor
+    future_value.div(combined_factor).expect("division by zero or overflow")
 }
 
 /// The Gini coefficient of an income (or other) distribution: twice the area between the Lorenz

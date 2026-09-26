@@ -37,27 +37,31 @@ explicitly **out of scope** for this crate.
 Plain `f64`/`u32` throughout would let a ratio and a percentage and a money amount all be swapped by
 accident. Instead:
 
-- `Money(rusty_money::Money<'static, iso::Currency>)` — a currency amount, backed by
-  [`rusty_money`](https://docs.rs/rusty-money) rather than a bare `f64` or `Decimal`, so repeated
-  addition and percentage scaling of money stays exact. `rusty_money::Money` requires every value
-  to carry a `Currency`; this crate fixes that to `USD` for every value it constructs (`Money::new`
-  always tags `iso::USD`), as a single internal working currency, so any two `Money` values built
-  anywhere in the crate can always be added or compared without a runtime currency-mismatch error.
-  Several worked examples are stated in GBP in the source material (`public-value-metrics` is
-  UK-focused) — the doc comments still cite the real pound figures HM Treasury and others publish,
-  but the `Money` values those doctests construct are tagged `USD` like everything else; the tag is
-  a `rusty_money` implementation requirement, not a currency-conversion claim. `Money` supports `+`,
-  `-`, `*`/`/` by `Decimal` (scaling), and `*`/`/` by `u32` (headcounts) — these are `std::ops`
-  operator impls on *our* wrapper that delegate to `rusty_money::Money`'s fallible `add`/`sub`/`mul`/`div`
-  methods internally, `.expect()`-ing them (documented as `# Panics`), so call sites keep ordinary
-  infix arithmetic rather than `Result`-chaining. `PartialOrd`/`Ord` are implemented the same way,
-  delegating to `rusty_money::Money::compare`. Dividing `Money` by `Money` yields a plain `f64`
-  `Ratio` (via `Money::ratio_to`, which is the one place a monetary figure is allowed to become a
-  float, because a ratio is a reporting figure, not an amount anything gets added back to), not
-  `Money`. Build `Money` values with the `rust_decimal_macros::dec!` literal macro
-  (`Money::new(dec!(450_000))`), never from an `f64` — `rust_decimal` and `rust_decimal_macros`
-  remain direct dependencies of this crate (as well as being `rusty_money`'s own internal decimal
-  type) purely for that literal-construction and `Decimal`-typed function-parameter purpose.
+- **`Money`** is `pub type Money = rusty_money::Money<'static, iso::Currency>;` — [`rusty_money::Money`](https://docs.rs/rusty-money)
+  used *directly*, not wrapped in a crate-local newtype, so every arithmetic and comparison call is
+  a one-line pass-through to `rusty_money`'s own methods (`Money::from_decimal`, `.add`, `.sub`,
+  `.mul`, `.div`, `.gt`, `.lt`, `.amount`, ...) — never a generic `T: FormattableCurrency` type
+  parameter or an operator impl of this crate's own. `rusty_money::Money` requires every value to
+  carry a `Currency`; this crate always constructs it with `iso::USD` as a single internal working
+  currency, so any two `Money` values built anywhere in the crate can always be added or compared
+  without a runtime currency-mismatch error. Several worked examples are stated in GBP in the
+  source material (`public-value-metrics` is UK-focused) — the doc comments still cite the real
+  pound figures HM Treasury and others publish, but the `Money` values those doctests construct are
+  tagged `USD` like everything else; the tag is a `rusty_money` implementation requirement, not a
+  currency-conversion claim. `rusty_money::Money::add`/`sub`/`mul`/`div` return
+  `Result<Money, MoneyError>` (they check the two operands share a currency); every call site
+  `.expect("...")`s that result with a short reason (documented as `# Panics` on the enclosing
+  function), rather than propagating a `MoneyError` the crate's own USD-only discipline makes
+  unreachable. [`crate::units::money_ratio`] is the one free function this crate adds on top of
+  `Money` itself: it divides two `Money` amounts into a plain `f64` `Ratio` (the one place a
+  monetary figure is allowed to become a float, because a ratio is a reporting figure, not an
+  amount anything gets added back to) — a shared helper, not a method on `Money`, since this crate
+  cannot add inherent methods to a type it re-exports rather than owns. Build `Money` values with
+  the `rust_decimal_macros::dec!` literal macro passed to `Money::from_decimal`
+  (`Money::from_decimal(dec!(450_000), iso::USD)`), never from an `f64` literal — `rust_decimal` and
+  `rust_decimal_macros` remain direct dependencies of this crate for that literal-construction and
+  `Decimal`-typed function-parameter purpose (`rusty_money` itself depends on `rust_decimal`
+  internally).
 - `Ratio(f64)` — a dimensionless ratio (e.g. an SROI ratio, a cost-effectiveness ratio). Has
   `Ratio::new`, `.value()`, and `Display` (`"1.44"`, `"1.44:1"` is left to callers who want that
   framing).
@@ -66,12 +70,10 @@ accident. Instead:
   builds one from a `0.0..=100.0` value; `.as_fraction()` and `.as_percent()` read it back either
   way. `Display` renders as `"42.0%"`.
 
-All three: `Debug, Clone, Copy, PartialEq, PartialOrd` (derived for `Ratio`/`Percentage`; for
-`Money`, `PartialEq`/`Eq`/`Hash` are derived but `PartialOrd`/`Ord` are hand-implemented against
-`rusty_money::Money::compare`, and arithmetic operators are hand-implemented against its fallible
-methods — see above), `#[must_use]` on every method that returns a value, and full rustdoc with a
-doctest. `Ratio`/`Percentage` constructors stay `const fn`; `Money`'s cannot be, since
-`rusty_money::Money::from_decimal` isn't `const`.
+`Ratio`/`Percentage`: `#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]`, a `const fn`
+constructor, `#[must_use]` on every method that returns a value, and full rustdoc with a doctest.
+`Money` carries whatever `rusty_money::Money` itself derives (`Debug, PartialEq, Eq, Clone, Copy,
+Hash`) — this crate adds nothing to it beyond the type alias and `money_ratio`.
 
 No newtype for plain counts (people, deployments, years) — those stay `u32`/`f64` as appropriate;
 wrapping them added no safety the source docs' arithmetic needed.
@@ -100,15 +102,15 @@ One function, few inputs, one numeric output. Prefer a plain function with named
 ///
 /// ```
 /// use public_value::philanthropy_metrics::cost_per_outcome;
-/// use public_value::units::Money;
 /// use rust_decimal_macros::dec;
+/// use rusty_money::{iso, Money};
 ///
-/// let cost = cost_per_outcome(Money::new(dec!(450_000)), 630);
-/// assert_eq!(cost.value().round_dp(2), dec!(714.29));
+/// let cost = cost_per_outcome(Money::from_decimal(dec!(450_000), iso::USD), 630);
+/// assert_eq!(cost.amount().round_dp(2), dec!(714.29));
 /// ```
 #[must_use]
 pub fn cost_per_outcome(total_programme_cost: Money, beneficiaries_achieving_outcome: u32) -> Money {
-    total_programme_cost / beneficiaries_achieving_outcome
+    total_programme_cost.div(beneficiaries_achieving_outcome).expect("division by zero or overflow")
 }
 ```
 

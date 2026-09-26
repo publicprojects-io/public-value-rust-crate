@@ -6,7 +6,7 @@
 use rust_decimal::Decimal;
 use rust_decimal::prelude::MathematicalOps;
 
-use crate::units::{Money, Percentage, Ratio};
+use crate::units::{CURRENCY_INVARIANT, Money, Percentage, Ratio, money_ratio};
 
 /// Mark Moore's strategic triangle test: a public initiative is justified only when it is
 /// legitimate and supported, substantively valuable, and operationally deliverable, all three at
@@ -76,21 +76,25 @@ impl ValueForMoneyOption {
     ///
     /// ```
     /// use public_value::foundations::ValueForMoneyOption;
-    /// use public_value::units::Money;
+    /// use public_value::units::{Money, iso};
     /// use rust_decimal_macros::dec;
     ///
     /// let option_a = ValueForMoneyOption {
-    ///     upfront_cost: Money::new(dec!(600_000)),
+    ///     upfront_cost: Money::from_decimal(dec!(600_000), iso::USD),
     ///     minutes_per_case: dec!(22),
-    ///     staff_cost_per_hour: Money::new(dec!(28)),
+    ///     staff_cost_per_hour: Money::from_decimal(dec!(28), iso::USD),
     /// };
     /// let annual = option_a.annual_efficiency_cost(40_000);
-    /// assert_eq!(annual.value().round_dp(0), dec!(410667));
+    /// assert_eq!(annual.amount().round_dp(0), dec!(410667));
     /// ```
     #[must_use]
     pub fn annual_efficiency_cost(&self, cases_per_year: u32) -> Money {
         let hours_per_case = self.minutes_per_case / Decimal::from(60);
-        self.staff_cost_per_hour * hours_per_case * Decimal::from(cases_per_year)
+        self.staff_cost_per_hour
+            .mul(hours_per_case)
+            .expect("multiplication overflow")
+            .mul(cases_per_year)
+            .expect("multiplication overflow")
     }
 
     /// Total cost after `years`: the one-off economy cost plus `years` of accumulated efficiency
@@ -98,31 +102,40 @@ impl ValueForMoneyOption {
     /// once staff time is counted), the cheaper option by `upfront_cost` alone is not always
     /// cheaper by `total_cost` once enough years have passed.
     ///
+    /// # Panics
+    ///
+    /// Panics if a decimal conversion overflows (not reachable for realistic case volumes).
+    ///
     /// # Examples
     ///
     /// ```
     /// use public_value::foundations::ValueForMoneyOption;
-    /// use public_value::units::Money;
+    /// use public_value::units::{Money, iso};
     /// use rust_decimal_macros::dec;
     ///
     /// let option_a = ValueForMoneyOption {
-    ///     upfront_cost: Money::new(dec!(600_000)),
+    ///     upfront_cost: Money::from_decimal(dec!(600_000), iso::USD),
     ///     minutes_per_case: dec!(22),
-    ///     staff_cost_per_hour: Money::new(dec!(28)),
+    ///     staff_cost_per_hour: Money::from_decimal(dec!(28), iso::USD),
     /// };
     /// let option_b = ValueForMoneyOption {
-    ///     upfront_cost: Money::new(dec!(900_000)),
+    ///     upfront_cost: Money::from_decimal(dec!(900_000), iso::USD),
     ///     minutes_per_case: dec!(9),
-    ///     staff_cost_per_hour: Money::new(dec!(28)),
+    ///     staff_cost_per_hour: Money::from_decimal(dec!(28), iso::USD),
     /// };
     /// // Cheaper economy wins in year 1 ...
-    /// assert!(option_a.total_cost(40_000, 1).value() < option_b.total_cost(40_000, 1).value());
+    /// let a1 = option_a.total_cost(40_000, 1);
+    /// let b1 = option_b.total_cost(40_000, 1);
+    /// assert!(a1.lt(&b1).unwrap());
     /// // ... but the efficiency gap swamps it by year 2.
-    /// assert!(option_a.total_cost(40_000, 2).value() > option_b.total_cost(40_000, 2).value());
+    /// let a2 = option_a.total_cost(40_000, 2);
+    /// let b2 = option_b.total_cost(40_000, 2);
+    /// assert!(a2.gt(&b2).unwrap());
     /// ```
     #[must_use]
     pub fn total_cost(&self, cases_per_year: u32, years: u32) -> Money {
-        self.upfront_cost + self.annual_efficiency_cost(cases_per_year) * Decimal::from(years)
+        let efficiency_cost = self.annual_efficiency_cost(cases_per_year).mul(years).expect("multiplication overflow");
+        self.upfront_cost.add(efficiency_cost).expect(CURRENCY_INVARIANT)
     }
 }
 
@@ -133,21 +146,25 @@ impl ValueForMoneyOption {
 /// opportunity cost because the forgone alternative is context-specific — this function just
 /// subtracts once the caller has identified and monetized that alternative.
 ///
+/// # Panics
+///
+/// Panics if the two amounts are not in the same currency (not reachable within this crate).
+///
 /// # Examples
 ///
 /// ```
 /// use public_value::foundations::net_public_value;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// // Digital-transformation fund: option A (£7.2m benefit) versus the realistic alternative B
 /// // (£6.4m), not versus zero.
-/// let net = net_public_value(Money::new(dec!(7_200_000)), Money::new(dec!(6_400_000)));
-/// assert_eq!(net.value(), dec!(800_000));
+/// let net = net_public_value(Money::from_decimal(dec!(7_200_000), iso::USD), Money::from_decimal(dec!(6_400_000), iso::USD));
+/// assert_eq!(*net.amount(), dec!(800_000));
 /// ```
 #[must_use]
 pub fn net_public_value(value_of_chosen_option: Money, value_of_next_best_alternative: Money) -> Money {
-    value_of_chosen_option - value_of_next_best_alternative
+    value_of_chosen_option.sub(value_of_next_best_alternative).expect(CURRENCY_INVARIANT)
 }
 
 /// The compound discount factor `(1 + rate)^years` used to bring a future sum to present value.
@@ -179,18 +196,18 @@ pub fn discount_factor(annual_rate: Decimal, years: u32) -> Decimal {
 ///
 /// ```
 /// use public_value::foundations::present_value;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal::prelude::ToPrimitive;
 /// use rust_decimal_macros::dec;
 ///
 /// // Flood defence: £10m of avoided damage in year 40, at a flat 3.5% discount rate (source doc's
 /// // own worked example rounds this to "≈ £2.52 million").
-/// let pv = present_value(Money::new(dec!(10_000_000)), dec!(0.035), 40);
-/// assert!((pv.value().to_f64().unwrap() - 2_525_725.0).abs() < 1_000.0);
+/// let pv = present_value(Money::from_decimal(dec!(10_000_000), iso::USD), dec!(0.035), 40);
+/// assert!((pv.amount().to_f64().unwrap() - 2_525_725.0).abs() < 1_000.0);
 /// ```
 #[must_use]
 pub fn present_value(future_value: Money, annual_rate: Decimal, years: u32) -> Money {
-    future_value / discount_factor(annual_rate, years)
+    future_value.div(discount_factor(annual_rate, years)).expect("division by zero or overflow")
 }
 
 /// The Green Book's distributional weight for a pound of benefit accruing to a household at
@@ -200,22 +217,27 @@ pub fn present_value(future_value: Money, annual_rate: Decimal, years: u32) -> M
 /// marginal utility of income is approximately `1.3`; it is a parameter here, not a constant,
 /// because the source doc explicitly warns against treating it as universal.
 ///
+/// # Panics
+///
+/// Panics if `household_income` is zero, or if the resulting ratio cannot be represented as an
+/// `f64`.
+///
 /// # Examples
 ///
 /// ```
 /// use public_value::foundations::distributional_weight;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// // A household earning half the national average.
-/// let weight = distributional_weight(Money::new(dec!(17_500)), Money::new(dec!(35_000)), 1.3);
+/// let weight = distributional_weight(Money::from_decimal(dec!(17_500), iso::USD), Money::from_decimal(dec!(35_000), iso::USD), 1.3);
 /// assert!((weight.value() - 2.462).abs() < 0.01);
 /// ```
 #[must_use]
 pub fn distributional_weight(household_income: Money, average_income: Money, elasticity: f64) -> Ratio {
     // Weight(y) = (ȳ / y)^e, i.e. average over household — not household over average — so that
     // below-average incomes get a weight greater than 1.
-    let ratio = average_income.ratio_to(household_income);
+    let ratio = money_ratio(average_income, household_income);
     Ratio::new(ratio.value().powf(elasticity))
 }
 
@@ -224,27 +246,27 @@ pub fn distributional_weight(household_income: Money, average_income: Money, ela
 /// # Panics
 ///
 /// Panics if `weight` cannot be represented as a `Decimal` (not reachable for a finite, positive
-/// weight).
+/// weight), or if the multiplication overflows.
 ///
 /// # Examples
 ///
 /// ```
 /// use public_value::foundations::{distributional_weight, weighted_benefit};
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal::prelude::ToPrimitive;
 /// use rust_decimal_macros::dec;
 ///
 /// // Programme B: a skills programme in a deprived ward, average household income £18,000
 /// // against a national average of £35,000 (the source doc's own worked example rounds the
 /// // weight to "≈2.53"; precise exponentiation gives ≈2.37, used here).
-/// let weight = distributional_weight(Money::new(dec!(18_000)), Money::new(dec!(35_000)), 1.3);
-/// let weighted = weighted_benefit(Money::new(dec!(2_000_000)), weight);
-/// assert!((weighted.value().to_f64().unwrap() - 4_747_492.0).abs() < 1_000.0);
+/// let weight = distributional_weight(Money::from_decimal(dec!(18_000), iso::USD), Money::from_decimal(dec!(35_000), iso::USD), 1.3);
+/// let weighted = weighted_benefit(Money::from_decimal(dec!(2_000_000), iso::USD), weight);
+/// assert!((weighted.amount().to_f64().unwrap() - 4_747_492.0).abs() < 1_000.0);
 /// ```
 #[must_use]
 pub fn weighted_benefit(unweighted_benefit: Money, weight: Ratio) -> Money {
     let weight_decimal = Decimal::from_f64_retain(weight.value()).expect("finite weight converts to Decimal");
-    unweighted_benefit * weight_decimal
+    unweighted_benefit.mul(weight_decimal).expect("multiplication overflow")
 }
 
 /// Net additional outcomes once the deadweight rate (what would have happened anyway) is

@@ -10,8 +10,8 @@ use public_value::societal_indicators::{
     atkinson_inequality_measure, gini_coefficient, human_development_index, ihdi_loss_percentage,
     inequality_adjusted_dimension_index, inequality_adjusted_hdi,
 };
-use public_value::units::Money;
 use rust_decimal_macros::dec;
+use rusty_money::{Money, iso};
 
 /// QALY: a treatment gaining 5 years at 0.7 utility, for £100,000, against a comparator gaining 3
 /// years at 0.7 utility for £30,000, gives an ICER that clears NICE's 2026 standard threshold band.
@@ -24,13 +24,13 @@ fn qaly_and_nice_threshold() {
 
     let incremental_qalys = qalys_treatment - qalys_comparator;
     assert!((incremental_qalys - 1.4).abs() < 1e-9);
-    let incremental_cost = Money::new(dec!(100_000)) - Money::new(dec!(30_000));
-    assert_eq!(incremental_cost.value(), dec!(70_000));
+    let incremental_cost = Money::from_decimal(dec!(100_000), iso::USD).sub(Money::from_decimal(dec!(30_000), iso::USD)).unwrap();
+    assert_eq!(*incremental_cost.amount(), dec!(70_000));
 
-    let cost_per_incremental_qaly = incremental_cost / dec!(1.4); // £70,000 / 1.4 QALYs
-    assert!((cost_per_incremental_qaly.value() - dec!(50_000)).abs() < dec!(1));
-    assert!(clears_qaly_threshold(cost_per_incremental_qaly, Money::new(dec!(51_000))));
-    assert!(!clears_qaly_threshold(cost_per_incremental_qaly, Money::new(dec!(35_000))));
+    let cost_per_incremental_qaly = incremental_cost.div(dec!(1.4)).unwrap(); // £70,000 / 1.4 QALYs
+    assert!((cost_per_incremental_qaly.amount() - dec!(50_000)).abs() < dec!(1));
+    assert!(clears_qaly_threshold(cost_per_incremental_qaly, Money::from_decimal(dec!(51_000), iso::USD)));
+    assert!(!clears_qaly_threshold(cost_per_incremental_qaly, Money::from_decimal(dec!(35_000), iso::USD)));
 }
 
 /// DALY: years of life lost plus years lived with disability.

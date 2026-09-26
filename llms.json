@@ -39,7 +39,7 @@
     {
       "name": "units",
       "file": "src/units.rs",
-      "description": "Shared Money/Ratio/Percentage newtypes used across every calculation.",
+      "description": "Shared Money (a rusty_money::Money type alias, used directly, not wrapped), Ratio, and Percentage types used across every calculation.",
       "public_items": ["Money", "Ratio", "Percentage"]
     },
     {

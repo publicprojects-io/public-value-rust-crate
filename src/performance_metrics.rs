@@ -5,7 +5,7 @@
 use rust_decimal::Decimal;
 
 use crate::impact_measurement::net_outcome_uplift;
-use crate::units::{Money, Percentage};
+use crate::units::{CURRENCY_INVARIANT, Money, Percentage};
 
 /// The headline percentage a KPI reports: how many observations met the target, out of the total
 /// observed.
@@ -65,24 +65,29 @@ impl PublicValueScorecard {
     ///
     /// ```
     /// use public_value::performance_metrics::PublicValueScorecard;
-    /// use public_value::units::{Money, Percentage};
+    /// use public_value::units::{Money, Percentage, iso};
     /// use rust_decimal_macros::dec;
     ///
     /// let reablement_service = PublicValueScorecard {
     ///     mission_outcome_rate: Percentage::from_percent(68.0),
     ///     mission_outcome_target: Percentage::from_percent(65.0),
-    ///     stewardship_cost_per_episode: Money::new(dec!(1_850)),
-    ///     stewardship_budgeted_cost_per_episode: Money::new(dec!(2_000)),
+    ///     stewardship_cost_per_episode: Money::from_decimal(dec!(1_850), iso::USD),
+    ///     stewardship_budgeted_cost_per_episode: Money::from_decimal(dec!(2_000), iso::USD),
     ///     process_staff_vacancy_rate: Percentage::from_percent(14.0),
     ///     process_caseload: 23,
     ///     process_safe_caseload_ceiling: 25,
     /// };
     /// assert!(reablement_service.looks_like_a_success_on_headline_numbers());
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if the two `Money` fields are not in the same currency (not reachable within this
+    /// crate).
     #[must_use]
     pub fn looks_like_a_success_on_headline_numbers(&self) -> bool {
         self.mission_outcome_rate.as_fraction() >= self.mission_outcome_target.as_fraction()
-            && self.stewardship_cost_per_episode.value() <= self.stewardship_budgeted_cost_per_episode.value()
+            && self.stewardship_cost_per_episode.lte(&self.stewardship_budgeted_cost_per_episode).expect(CURRENCY_INVARIANT)
     }
 
     /// True if the process perspective shows a staffing risk the mission and stewardship numbers
@@ -93,14 +98,14 @@ impl PublicValueScorecard {
     ///
     /// ```
     /// use public_value::performance_metrics::PublicValueScorecard;
-    /// use public_value::units::{Money, Percentage};
+    /// use public_value::units::{Money, Percentage, iso};
     /// use rust_decimal_macros::dec;
     ///
     /// let reablement_service = PublicValueScorecard {
     ///     mission_outcome_rate: Percentage::from_percent(68.0),
     ///     mission_outcome_target: Percentage::from_percent(65.0),
-    ///     stewardship_cost_per_episode: Money::new(dec!(1_850)),
-    ///     stewardship_budgeted_cost_per_episode: Money::new(dec!(2_000)),
+    ///     stewardship_cost_per_episode: Money::from_decimal(dec!(1_850), iso::USD),
+    ///     stewardship_budgeted_cost_per_episode: Money::from_decimal(dec!(2_000), iso::USD),
     ///     process_staff_vacancy_rate: Percentage::from_percent(14.0),
     ///     process_caseload: 23,
     ///     process_safe_caseload_ceiling: 25,
@@ -176,13 +181,18 @@ impl PerformanceAccountability {
 ///
 /// ```
 /// use public_value::performance_metrics::payment_by_results_total;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// // Family-intervention service: £4,000/referral activity payment, £6,000/outcome payment.
-/// let total = payment_by_results_total(200, Money::new(dec!(4_000)), 96, Money::new(dec!(6_000)));
-/// assert_eq!(total.value(), dec!(1_376_000));
+/// let total = payment_by_results_total(200, Money::from_decimal(dec!(4_000), iso::USD), 96, Money::from_decimal(dec!(6_000), iso::USD));
+/// assert_eq!(*total.amount(), dec!(1_376_000));
 /// ```
+///
+/// # Panics
+///
+/// Panics if a multiplication overflows, or if the two payment totals are not in the same
+/// currency (not reachable within this crate).
 #[must_use]
 pub fn payment_by_results_total(
     activity_count: u32,
@@ -190,7 +200,9 @@ pub fn payment_by_results_total(
     outcome_count: u32,
     outcome_unit_price: Money,
 ) -> Money {
-    activity_unit_price * activity_count + outcome_unit_price * outcome_count
+    let activity_payment = activity_unit_price.mul(activity_count).expect("multiplication overflow");
+    let outcome_payment = outcome_unit_price.mul(outcome_count).expect("multiplication overflow");
+    activity_payment.add(outcome_payment).expect(CURRENCY_INVARIANT)
 }
 
 /// A quality-adjusted output index: a base index scaled by activity growth and a quality
@@ -272,7 +284,7 @@ pub fn net_satisfaction(satisfied: u32, dissatisfied: u32, total_respondents: u3
 /// Panics if `completed_transactions` is zero.
 #[must_use]
 pub fn cost_per_transaction(total_running_cost: Money, completed_transactions: u32) -> Money {
-    total_running_cost / completed_transactions
+    total_running_cost.div(completed_transactions).expect("division by zero or overflow")
 }
 
 /// The channel-shift saving from moving a share of transaction volume onto a cheaper channel: the
@@ -289,18 +301,24 @@ pub fn cost_per_transaction(total_running_cost: Money, completed_transactions: u
 ///
 /// ```
 /// use public_value::performance_metrics::channel_shift_saving;
-/// use public_value::units::{Money, Percentage};
+/// use public_value::units::{Money, Percentage, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// // Licence-renewal service: 2m transactions/year, a 25-point digital take-up shift, phone
 /// // £3.00/transaction versus digital £0.30/transaction.
-/// let saving = channel_shift_saving(2_000_000, Percentage::from_percent(25.0), Money::new(dec!(3.00)), Money::new(dec!(0.30)));
-/// assert_eq!(saving.value().round_dp(2), dec!(1_350_000.00));
+/// let saving = channel_shift_saving(2_000_000, Percentage::from_percent(25.0), Money::from_decimal(dec!(3.00), iso::USD), Money::from_decimal(dec!(0.30), iso::USD));
+/// assert_eq!(saving.amount().round_dp(2), dec!(1_350_000.00));
 /// ```
 #[must_use]
 pub fn channel_shift_saving(transaction_volume: u32, take_up_shift: Percentage, old_channel_cost: Money, new_channel_cost: Money) -> Money {
     let shift_fraction = Decimal::from_f64_retain(take_up_shift.as_fraction()).expect("finite take-up shift converts to Decimal");
-    (old_channel_cost - new_channel_cost) * shift_fraction * transaction_volume
+    old_channel_cost
+        .sub(new_channel_cost)
+        .expect(CURRENCY_INVARIANT)
+        .mul(shift_fraction)
+        .expect("multiplication overflow")
+        .mul(transaction_volume)
+        .expect("multiplication overflow")
 }
 
 /// The failure-demand cost from users who attempt a channel but do not complete: the number who
@@ -317,18 +335,22 @@ pub fn channel_shift_saving(transaction_volume: u32, take_up_shift: Percentage, 
 ///
 /// ```
 /// use public_value::performance_metrics::failure_demand_cost;
-/// use public_value::units::{Money, Percentage};
+/// use public_value::units::{Money, Percentage, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// // Before redesign: 700,000 digital attempts/year at 80% completion, £3.00 phone fallback.
-/// let before = failure_demand_cost(700_000, Percentage::from_percent(80.0), Money::new(dec!(3.00)));
-/// assert_eq!(before.value().round_dp(2), dec!(420_000.00));
+/// let before = failure_demand_cost(700_000, Percentage::from_percent(80.0), Money::from_decimal(dec!(3.00), iso::USD));
+/// assert_eq!(before.amount().round_dp(2), dec!(420_000.00));
 /// ```
 #[must_use]
 pub fn failure_demand_cost(channel_attempts: u32, completion_rate: Percentage, fallback_channel_cost: Money) -> Money {
     let non_completing_fraction =
         Decimal::from_f64_retain(1.0 - completion_rate.as_fraction()).expect("finite completion rate converts to Decimal");
-    fallback_channel_cost * non_completing_fraction * channel_attempts
+    fallback_channel_cost
+        .mul(non_completing_fraction)
+        .expect("multiplication overflow")
+        .mul(channel_attempts)
+        .expect("multiplication overflow")
 }
 
 /// A legitimacy triangulation: current versus prior readings on three independent signals (an

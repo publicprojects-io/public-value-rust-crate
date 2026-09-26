@@ -19,7 +19,7 @@ extensions separately. Read both before adding or changing a public item.
 
 ```sh
 cargo build
-cargo test                                  # unit + integration + 98 doctests
+cargo test                                  # unit + integration + 107 doctests
 cargo clippy --all-targets -- -D warnings   # must be clean; clippy::pedantic is denied crate-wide
 cargo doc --no-deps                         # must build without warnings; missing_docs is denied
 ```
@@ -30,18 +30,27 @@ still fails on something in `tests/`.
 
 ## Conventions (full detail in `spec/architecture.md`)
 
-- **Money is `rusty_money::Money`, never a bare `f64` or `Decimal`.** Build `Money` values with
-  `rust_decimal_macros::dec!` (`Money::new(dec!(450_000))`), not from a float literal —
-  `Money::new` still takes a `Decimal` and tags it with the crate's fixed internal working currency
-  (`iso::USD`) internally. `Ratio` and `Percentage` stay `f64` because several formulas need
-  transcendental functions.
+- **`Money` is `rusty_money::Money` used directly — not wrapped.** `pub type Money =
+  rusty_money::Money<'static, iso::Currency>;` in `src/units.rs`. Construct one with
+  `Money::from_decimal(dec!(450_000), iso::USD)`, never from an `f64` literal. Every arithmetic or
+  comparison call (`.add`, `.sub`, `.mul`, `.div`, `.gt`, `.lt`, ...) is a one-line call straight
+  through to `rusty_money::Money`'s own method — never reintroduce a wrapper type or a generic
+  `T: FormattableCurrency` parameter on this crate's own functions. `Ratio` and `Percentage` stay
+  `f64` because several formulas need transcendental functions.
 - **Every `Money` is tagged `USD` internally, even in GBP-labelled worked examples.**
   `rusty_money::Money` requires a `Currency`; this crate fixes it to `USD` for every value so two
   `Money` values built anywhere in the crate can always be added or compared without a runtime
   currency-mismatch error. Doc comments still cite the real pound figures the source material
   publishes — only the underlying type's currency tag is fixed, not the prose. Never construct a
-  `Money` with a different currency; every `+`/`-`/`<`/`>` on `Money` will panic on a mismatch (see
-  `src/units.rs`'s `CURRENCY_INVARIANT`).
+  `Money` with a different currency.
+- **`rusty_money::Money::add`/`sub`/`mul`/`div` return `Result`, not a plain `Money`.** They check
+  the two operands share a currency. Since this crate always uses `USD`, that check can never
+  actually fail — `.expect("...")` the result with a short reason (documented as `# Panics` on the
+  enclosing function; see `src/units.rs`'s `CURRENCY_INVARIANT` constant for the standard
+  add/sub/compare message), don't `?`-propagate a `MoneyError` your function will never return.
+  Comparisons (`<`, `>`) aren't operators either — use `.gt(&other)`/`.lt(&other)` (also
+  `Result`-returning); `==` does work, since `rusty_money::Money` derives `PartialEq`. Use
+  [`crate::units::money_ratio`] to divide two `Money` amounts into a `Ratio`.
 - **`Money`'s `Display` shows a currency symbol and rounds correctly.** It delegates to
   `rusty_money::Money`'s own locale-aware formatting (`$714.29`, not a bare `714.29`), which rounds
   half-to-even rather than truncating.

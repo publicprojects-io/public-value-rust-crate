@@ -6,7 +6,7 @@
 use rust_decimal::Decimal;
 
 use crate::foundations::discount_factor;
-use crate::units::{Money, Ratio};
+use crate::units::{CURRENCY_INVARIANT, Money, Ratio, money_ratio};
 
 /// HM Treasury's five-case model: a business case must clear the strategic, economic, commercial,
 /// financial, and management cases independently — a proposal can fail on any one regardless of
@@ -88,26 +88,31 @@ pub fn annuity_factor(annual_rate: Decimal, years: u32) -> Decimal {
 ///
 /// Ported from `social-cost-benefit-analysis`.
 ///
+/// # Panics
+///
+/// Panics if the two amounts are not in the same currency (not reachable within this crate).
+///
 /// # Examples
 ///
 /// ```
 /// use public_value::economic_appraisal::{annuity_factor, net_present_social_value};
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal::Decimal;
 /// use rust_decimal_macros::dec;
 ///
 /// // Cycling network: £3m capital plus £50,000/year maintenance against £280,000/year benefits,
 /// // over 20 years at 3.5%.
 /// let factor = annuity_factor(dec!(0.035), 20);
-/// let cost_pv = Money::new(dec!(3_000_000)) + Money::new(dec!(50_000)) * factor;
-/// let benefit_pv = Money::new(dec!(280_000)) * factor;
+/// let maintenance_pv = Money::from_decimal(dec!(50_000), iso::USD).mul(factor).unwrap();
+/// let cost_pv = Money::from_decimal(dec!(3_000_000), iso::USD).add(maintenance_pv).unwrap();
+/// let benefit_pv = Money::from_decimal(dec!(280_000), iso::USD).mul(factor).unwrap();
 /// let npsv = net_present_social_value(benefit_pv, cost_pv);
-/// assert!(npsv.value() > Decimal::ZERO);
-/// assert!((npsv.value() - dec!(268_852)).abs() < dec!(1_000));
+/// assert!(*npsv.amount() > Decimal::ZERO);
+/// assert!((npsv.amount() - dec!(268_852)).abs() < dec!(1_000));
 /// ```
 #[must_use]
 pub fn net_present_social_value(present_value_of_benefits: Money, present_value_of_costs: Money) -> Money {
-    present_value_of_benefits - present_value_of_costs
+    present_value_of_benefits.sub(present_value_of_costs).expect(CURRENCY_INVARIANT)
 }
 
 /// The benefit-cost ratio: present value of benefits divided by present value of costs. Above 1.0
@@ -124,18 +129,19 @@ pub fn net_present_social_value(present_value_of_benefits: Money, present_value_
 ///
 /// ```
 /// use public_value::economic_appraisal::{annuity_factor, benefit_cost_ratio};
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// let factor = annuity_factor(dec!(0.035), 20);
-/// let cost_pv = Money::new(dec!(3_000_000)) + Money::new(dec!(50_000)) * factor;
-/// let benefit_pv = Money::new(dec!(280_000)) * factor;
+/// let maintenance_pv = Money::from_decimal(dec!(50_000), iso::USD).mul(factor).unwrap();
+/// let cost_pv = Money::from_decimal(dec!(3_000_000), iso::USD).add(maintenance_pv).unwrap();
+/// let benefit_pv = Money::from_decimal(dec!(280_000), iso::USD).mul(factor).unwrap();
 /// let bcr = benefit_cost_ratio(benefit_pv, cost_pv);
 /// assert!((bcr.value() - 1.072).abs() < 0.01);
 /// ```
 #[must_use]
 pub fn benefit_cost_ratio(present_value_of_benefits: Money, present_value_of_costs: Money) -> Ratio {
-    present_value_of_benefits.ratio_to(present_value_of_costs)
+    money_ratio(present_value_of_benefits, present_value_of_costs)
 }
 
 /// The (average) cost-effectiveness ratio: total cost divided by outcome units achieved, in the
@@ -151,16 +157,16 @@ pub fn benefit_cost_ratio(present_value_of_benefits: Money, present_value_of_cos
 ///
 /// ```
 /// use public_value::economic_appraisal::cost_effectiveness_ratio;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// // Housing First: £900,000 for 60 people moved into settled accommodation.
-/// let cer = cost_effectiveness_ratio(Money::new(dec!(900_000)), 60);
-/// assert_eq!(cer.value(), dec!(15_000));
+/// let cer = cost_effectiveness_ratio(Money::from_decimal(dec!(900_000), iso::USD), 60);
+/// assert_eq!(*cer.amount(), dec!(15_000));
 /// ```
 #[must_use]
 pub fn cost_effectiveness_ratio(total_cost: Money, outcome_units_achieved: u32) -> Money {
-    total_cost / outcome_units_achieved
+    total_cost.div(outcome_units_achieved).expect("division by zero or overflow")
 }
 
 /// The incremental cost-effectiveness ratio (ICER) between two options: the extra cost of option A
@@ -178,18 +184,18 @@ pub fn cost_effectiveness_ratio(total_cost: Money, outcome_units_achieved: u32) 
 ///
 /// ```
 /// use public_value::economic_appraisal::incremental_cost_effectiveness_ratio;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// // Hostel + move-on support (£600,000, 50 outcomes) versus outreach (£350,000, 20 outcomes).
-/// let icer = incremental_cost_effectiveness_ratio(Money::new(dec!(600_000)), 50, Money::new(dec!(350_000)), 20);
-/// assert!((icer.value() - dec!(8333.33)).abs() < dec!(1));
+/// let icer = incremental_cost_effectiveness_ratio(Money::from_decimal(dec!(600_000), iso::USD), 50, Money::from_decimal(dec!(350_000), iso::USD), 20);
+/// assert!((icer.amount() - dec!(8333.33)).abs() < dec!(1));
 /// ```
 #[must_use]
 pub fn incremental_cost_effectiveness_ratio(cost_a: Money, outcome_a: u32, cost_b: Money, outcome_b: u32) -> Money {
-    let cost_diff = cost_a - cost_b;
+    let cost_diff = cost_a.sub(cost_b).expect(CURRENCY_INVARIANT);
     let outcome_diff = i64::from(outcome_a) - i64::from(outcome_b);
-    cost_diff / Decimal::from(outcome_diff)
+    cost_diff.div(outcome_diff).expect("division by zero or overflow")
 }
 
 /// A multi-criteria decision analysis weighted score: `Σ (score_j × weight_j)` across criteria.
@@ -247,23 +253,23 @@ pub fn wellbys(people_affected: u32, life_satisfaction_change: f64, duration_yea
 /// # Panics
 ///
 /// Panics if `total_wellbys` cannot be represented as a `Decimal` (not reachable for a finite
-/// value).
+/// value), or if the multiplication overflows.
 ///
 /// # Examples
 ///
 /// ```
 /// use public_value::economic_appraisal::{monetize_wellbys, wellbys};
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// let total = wellbys(400, 0.7, 2.0);
-/// let value = monetize_wellbys(total, Money::new(dec!(13_000)));
-/// assert_eq!(value.value(), dec!(7_280_000));
+/// let value = monetize_wellbys(total, Money::from_decimal(dec!(13_000), iso::USD));
+/// assert_eq!(*value.amount(), dec!(7_280_000));
 /// ```
 #[must_use]
 pub fn monetize_wellbys(total_wellbys: f64, value_per_wellby: Money) -> Money {
     let wellbys_decimal = Decimal::from_f64_retain(total_wellbys).expect("finite WELLBY total converts to Decimal");
-    value_per_wellby * wellbys_decimal
+    value_per_wellby.mul(wellbys_decimal).expect("multiplication overflow")
 }
 
 /// The aggregate stated-preference value: mean willingness-to-pay per household times the number
@@ -271,20 +277,24 @@ pub fn monetize_wellbys(total_wellbys: f64, value_per_wellby: Money) -> Money {
 ///
 /// Ported from `stated-preference-valuation`.
 ///
+/// # Panics
+///
+/// Panics if the multiplication overflows.
+///
 /// # Examples
 ///
 /// ```
 /// use public_value::economic_appraisal::aggregate_stated_preference_value;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// // Defra water-quality survey: mean WTP £28/household/year across 340,000 households.
-/// let aggregate = aggregate_stated_preference_value(Money::new(dec!(28)), 340_000);
-/// assert_eq!(aggregate.value(), dec!(9_520_000));
+/// let aggregate = aggregate_stated_preference_value(Money::from_decimal(dec!(28), iso::USD), 340_000);
+/// assert_eq!(*aggregate.amount(), dec!(9_520_000));
 /// ```
 #[must_use]
 pub fn aggregate_stated_preference_value(mean_willingness_to_pay: Money, affected_population: u32) -> Money {
-    mean_willingness_to_pay * affected_population
+    mean_willingness_to_pay.mul(affected_population).expect("multiplication overflow")
 }
 
 /// The hedonic implicit price of a one-unit change in a non-market attribute (e.g. one decibel of
@@ -295,26 +305,26 @@ pub fn aggregate_stated_preference_value(mean_willingness_to_pay: Money, affecte
 /// # Panics
 ///
 /// Panics if `fractional_price_change_per_unit` cannot be represented as a `Decimal` (not
-/// reachable for a finite value).
+/// reachable for a finite value), or if the multiplication overflows.
 ///
 /// # Examples
 ///
 /// ```
 /// use public_value::economic_appraisal::hedonic_implicit_price;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// // Each 1dB of aircraft noise is associated with a 0.5% house-price reduction on a £280,000 house.
 /// // The 0.5% figure is an approximate regression coefficient, not an exact decimal amount, so
 /// // converting it via `f64` can leave a sub-penny remainder; round before comparing.
-/// let implicit_price = hedonic_implicit_price(Money::new(dec!(280_000)), 0.005);
-/// assert_eq!(implicit_price.value().round_dp(2), dec!(1_400));
+/// let implicit_price = hedonic_implicit_price(Money::from_decimal(dec!(280_000), iso::USD), 0.005);
+/// assert_eq!(implicit_price.amount().round_dp(2), dec!(1_400));
 /// ```
 #[must_use]
 pub fn hedonic_implicit_price(market_price: Money, fractional_price_change_per_unit: f64) -> Money {
     let fraction = Decimal::from_f64_retain(fractional_price_change_per_unit)
         .expect("finite fractional price change converts to Decimal");
-    market_price * fraction
+    market_price.mul(fraction).expect("multiplication overflow")
 }
 
 /// The travel-cost method's total annual recreational value: visits times the sum of actual travel
@@ -322,20 +332,29 @@ pub fn hedonic_implicit_price(market_price: Money, fractional_price_change_per_u
 ///
 /// Ported from `revealed-preference-valuation`.
 ///
+/// # Panics
+///
+/// Panics if the two amounts are not in the same currency (not reachable within this crate), or if
+/// the multiplication overflows.
+///
 /// # Examples
 ///
 /// ```
 /// use public_value::economic_appraisal::travel_cost_annual_value;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// // Nature reserve: 40,000 visits/year, £14 travel cost spent, £9 consumer surplus per visit.
-/// let value = travel_cost_annual_value(40_000, Money::new(dec!(14)), Money::new(dec!(9)));
-/// assert_eq!(value.value(), dec!(920_000));
+/// let value = travel_cost_annual_value(40_000, Money::from_decimal(dec!(14), iso::USD), Money::from_decimal(dec!(9), iso::USD));
+/// assert_eq!(*value.amount(), dec!(920_000));
 /// ```
 #[must_use]
 pub fn travel_cost_annual_value(visits_per_year: u32, cost_per_visit: Money, consumer_surplus_per_visit: Money) -> Money {
-    (cost_per_visit + consumer_surplus_per_visit) * visits_per_year
+    cost_per_visit
+        .add(consumer_surplus_per_visit)
+        .expect(CURRENCY_INVARIANT)
+        .mul(visits_per_year)
+        .expect("multiplication overflow")
 }
 
 /// The shadow-priced benefit of avoided or abated carbon emissions: tonnes times the official
@@ -345,19 +364,23 @@ pub fn travel_cost_annual_value(visits_per_year: u32, cost_per_visit: Money, con
 /// official schedule rises over the appraisal period — using one year's value throughout
 /// understates later-year benefits, per the source doc's explicit pitfall.
 ///
+/// # Panics
+///
+/// Panics if the multiplication overflows.
+///
 /// # Examples
 ///
 /// ```
 /// use public_value::economic_appraisal::shadow_carbon_benefit;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
-/// let benefit = shadow_carbon_benefit(400, Money::new(dec!(280)));
-/// assert_eq!(benefit.value(), dec!(112_000));
+/// let benefit = shadow_carbon_benefit(400, Money::from_decimal(dec!(280), iso::USD));
+/// assert_eq!(*benefit.amount(), dec!(112_000));
 /// ```
 #[must_use]
 pub fn shadow_carbon_benefit(tonnes_co2e: u32, price_per_tonne: Money) -> Money {
-    price_per_tonne * tonnes_co2e
+    price_per_tonne.mul(tonnes_co2e).expect("multiplication overflow")
 }
 
 /// The shadow wage rate: the market wage scaled down by a fraction reflecting that labour drawn
@@ -365,19 +388,23 @@ pub fn shadow_carbon_benefit(tonnes_co2e: u32, price_per_tonne: Money) -> Money 
 ///
 /// Ported from `shadow-pricing`.
 ///
+/// # Panics
+///
+/// Panics if the multiplication overflows.
+///
 /// # Examples
 ///
 /// ```
 /// use public_value::economic_appraisal::shadow_wage_rate;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
-/// let shadow_wage = shadow_wage_rate(Money::new(dec!(11.00)), dec!(0.6));
-/// assert_eq!(shadow_wage.value(), dec!(6.600));
+/// let shadow_wage = shadow_wage_rate(Money::from_decimal(dec!(11.00), iso::USD), dec!(0.6));
+/// assert_eq!(*shadow_wage.amount(), dec!(6.600));
 /// ```
 #[must_use]
 pub fn shadow_wage_rate(market_wage: Money, shadow_fraction: Decimal) -> Money {
-    market_wage * shadow_fraction
+    market_wage.mul(shadow_fraction).expect("multiplication overflow")
 }
 
 /// The net social benefit per hour of employing previously idle labour: the market wage minus the
@@ -386,21 +413,25 @@ pub fn shadow_wage_rate(market_wage: Money, shadow_fraction: Decimal) -> Money {
 ///
 /// Ported from `shadow-pricing`.
 ///
+/// # Panics
+///
+/// Panics if the two amounts are not in the same currency (not reachable within this crate).
+///
 /// # Examples
 ///
 /// ```
 /// use public_value::economic_appraisal::{net_social_benefit_per_hour, shadow_wage_rate};
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
-/// let market_wage = Money::new(dec!(11.00));
+/// let market_wage = Money::from_decimal(dec!(11.00), iso::USD);
 /// let shadow_wage = shadow_wage_rate(market_wage, dec!(0.6));
 /// let net_benefit = net_social_benefit_per_hour(market_wage, shadow_wage);
-/// assert_eq!(net_benefit.value(), dec!(4.400));
+/// assert_eq!(*net_benefit.amount(), dec!(4.400));
 /// ```
 #[must_use]
 pub fn net_social_benefit_per_hour(market_wage: Money, shadow_wage: Money) -> Money {
-    market_wage - shadow_wage
+    market_wage.sub(shadow_wage).expect(CURRENCY_INVARIANT)
 }
 
 /// A Quality-Adjusted Life Year (QALY): years lived in a health state, times a utility weight for
@@ -430,20 +461,24 @@ pub fn qaly(years_in_health_state: f64, utility_weight: f64) -> f64 {
 /// Whether an incremental cost-effectiveness ratio, denominated in QALYs, clears a NICE-style
 /// cost-per-QALY threshold.
 ///
+/// # Panics
+///
+/// Panics if the two amounts are not in the same currency (not reachable within this crate).
+///
 /// # Examples
 ///
 /// ```
 /// use public_value::economic_appraisal::clears_qaly_threshold;
-/// use public_value::units::Money;
+/// use public_value::units::{Money, iso};
 /// use rust_decimal_macros::dec;
 ///
 /// // £20,000 per QALY gained clears NICE's 2026 standard threshold band of £25,000–£35,000.
-/// let icer = Money::new(dec!(20_000));
-/// assert!(clears_qaly_threshold(icer, Money::new(dec!(25_000))));
+/// let icer = Money::from_decimal(dec!(20_000), iso::USD);
+/// assert!(clears_qaly_threshold(icer, Money::from_decimal(dec!(25_000), iso::USD)));
 /// ```
 #[must_use]
 pub fn clears_qaly_threshold(cost_per_qaly: Money, threshold_per_qaly: Money) -> bool {
-    cost_per_qaly.value() <= threshold_per_qaly.value()
+    cost_per_qaly.lte(&threshold_per_qaly).expect(CURRENCY_INVARIANT)
 }
 
 /// Years of Life Lost (YLL): the number of deaths times the standard life expectancy remaining at

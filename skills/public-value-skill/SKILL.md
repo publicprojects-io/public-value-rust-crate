@@ -23,9 +23,14 @@ so you can sanity-check your own numbers against a known-correct one before wiri
    what a realistic magnitude looks like. A `Percentage` is *not* the same as a raw `f64` — use
    `Percentage::from_percent(40.0)` for "40%", not `0.4`, unless the function's doctest shows
    otherwise.
-3. **Build `Money` values with `dec!`, never an `f64` literal.** `Money::new(450_000.0)` will not
-   compile; the crate requires `rust_decimal_macros::dec!` (`Money::new(dec!(450_000))`) so
-   monetary figures stay exact.
+3. **Build `Money` values with `Money::from_decimal(dec!(...), iso::USD)`, never an `f64` literal.**
+   `Money` is `rusty_money::Money` used directly (`use rusty_money::{Money, iso};`), not a wrapper —
+   every value needs a currency, and this crate always uses `iso::USD` internally, even for
+   GBP-labelled worked examples (see [`units`] module docs for why). `.add`/`.sub`/`.mul`/`.div`
+   return `Result` (they check currencies match); `.expect("...")` it rather than propagating a
+   `MoneyError` that can't actually occur here. Comparisons are `.gt(&other)`/`.lt(&other)`, not
+   `<`/`>`; `==` works directly. Use [`units::money_ratio`] to divide two `Money` amounts into a
+   `Ratio`.
 4. **Compose across modules where the source book does.** Several real calculations span more
    than one topic — an SROI figure needs [`foundations::present_value`] for the year-2 discounting
    step; a natural-capital asset value needs [`economic_appraisal::annuity_factor`]. Check a

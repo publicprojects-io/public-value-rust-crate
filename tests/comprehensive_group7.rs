@@ -7,21 +7,22 @@ use public_value::societal_indicators::{
     imd_composite_score, imd_decile, imd_domain_contribution, mpi_headcount_ratio,
     multidimensional_poverty_index, present_value_across_schedule, social_capital_pillar_gap,
 };
-use public_value::units::{Money, Percentage};
+use public_value::units::{Percentage, money_ratio};
 use rust_decimal_macros::dec;
+use rusty_money::{Money, iso};
 
 /// `gdp-alternatives`: the region's GPI worked example (49 $bn, below the $55bn GDP figure) and the
 /// GNH sufficiency worked example (7 of 9 domains clears the 6-domain bar).
 #[test]
 fn gdp_alternatives_examples() {
     let gpi = genuine_progress_indicator(
-        Money::new(dec!(50)),
-        Money::new(dec!(12)),
-        Money::new(dec!(3)) + Money::new(dec!(4)),
-        Money::new(dec!(6)),
+        Money::from_decimal(dec!(50), iso::USD),
+        Money::from_decimal(dec!(12), iso::USD),
+        Money::from_decimal(dec!(3), iso::USD).add(Money::from_decimal(dec!(4), iso::USD)).unwrap(),
+        Money::from_decimal(dec!(6), iso::USD),
     );
-    assert_eq!(gpi.value(), dec!(49));
-    assert!(gpi.value() < dec!(55)); // GDP grew to $55bn while GPI did not keep pace
+    assert_eq!(*gpi.amount(), dec!(49));
+    assert!(*gpi.amount() < dec!(55)); // GDP grew to $55bn while GPI did not keep pace
 
     assert!(gnh_sufficiency(7, 6));
     assert!(!gnh_sufficiency(5, 6));
@@ -71,10 +72,10 @@ fn wellbeing_adjusted_life_years_loneliness_service() {
     let total = wellbys(400, 0.8, 2.0);
     assert!((total - 640.0).abs() < 1e-9);
 
-    let value = monetize_wellbys(total, Money::new(dec!(13_000)));
-    assert_eq!(value.value(), dec!(8_320_000));
+    let value = monetize_wellbys(total, Money::from_decimal(dec!(13_000), iso::USD));
+    assert_eq!(*value.amount(), dec!(8_320_000));
 
-    let bcr = value.ratio_to(Money::new(dec!(600_000)));
+    let bcr = money_ratio(value, Money::from_decimal(dec!(600_000), iso::USD));
     assert!((bcr.value() - 13.9).abs() < 0.1);
 }
 
@@ -113,16 +114,16 @@ fn social_capital_metrics_neighbourhood_snapshot() {
 /// carbon-storage value over a 50-year horizon at 3.5%.
 #[test]
 fn natural_capital_accounting_urban_woodland() {
-    let recreational_annual = Money::new(dec!(3)) * 80_000_u32;
-    let carbon_annual = Money::new(dec!(75)) * 400_u32;
+    let recreational_annual = Money::from_decimal(dec!(3), iso::USD).mul(80_000_u32).unwrap();
+    let carbon_annual = Money::from_decimal(dec!(75), iso::USD).mul(400_u32).unwrap();
 
     let recreational_asset = ecosystem_asset_value(recreational_annual, dec!(0.035), 50);
     let carbon_asset = ecosystem_asset_value(carbon_annual, dec!(0.035), 50);
-    let total_asset = recreational_asset + carbon_asset;
+    let total_asset = recreational_asset.add(carbon_asset).unwrap();
 
-    assert!((recreational_asset.value() - dec!(5_629_348)).abs() < dec!(1_000));
-    assert!((carbon_asset.value() - dec!(703_668)).abs() < dec!(1_000));
-    assert!((total_asset.value() - dec!(6_333_017)).abs() < dec!(1_000));
+    assert!((recreational_asset.amount() - dec!(5_629_348)).abs() < dec!(1_000));
+    assert!((carbon_asset.amount() - dec!(703_668)).abs() < dec!(1_000));
+    assert!((total_asset.amount() - dec!(6_333_017)).abs() < dec!(1_000));
 }
 
 /// `intergenerational-equity-and-sustainability-discounting`: the three-regime worked example for
@@ -130,12 +131,12 @@ fn natural_capital_accounting_urban_woodland() {
 /// roughly eightfold.
 #[test]
 fn intergenerational_equity_three_discounting_regimes() {
-    let flat = present_value_across_schedule(Money::new(dec!(1)), &[(dec!(0.035), 100)]);
-    let declining = present_value_across_schedule(Money::new(dec!(1)), &[(dec!(0.035), 30), (dec!(0.03), 45), (dec!(0.025), 25)]);
-    let stern = present_value_across_schedule(Money::new(dec!(1)), &[(dec!(0.014), 100)]);
+    let flat = present_value_across_schedule(Money::from_decimal(dec!(1), iso::USD), &[(dec!(0.035), 100)]);
+    let declining = present_value_across_schedule(Money::from_decimal(dec!(1), iso::USD), &[(dec!(0.035), 30), (dec!(0.03), 45), (dec!(0.025), 25)]);
+    let stern = present_value_across_schedule(Money::from_decimal(dec!(1), iso::USD), &[(dec!(0.014), 100)]);
 
-    assert!((flat.value() - dec!(0.032)).abs() < dec!(0.001));
-    assert!((declining.value() - dec!(0.051)).abs() < dec!(0.001));
-    assert!((stern.value() - dec!(0.249)).abs() < dec!(0.001));
-    assert!(stern.value() > declining.value() && declining.value() > flat.value());
+    assert!((flat.amount() - dec!(0.032)).abs() < dec!(0.001));
+    assert!((declining.amount() - dec!(0.051)).abs() < dec!(0.001));
+    assert!((stern.amount() - dec!(0.249)).abs() < dec!(0.001));
+    assert!(stern.gt(&declining).unwrap() && declining.gt(&flat).unwrap());
 }

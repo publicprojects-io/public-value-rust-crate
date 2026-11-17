@@ -134,8 +134,13 @@ impl ValueForMoneyOption {
     /// ```
     #[must_use]
     pub fn total_cost(&self, cases_per_year: u32, years: u32) -> Money {
-        let efficiency_cost = self.annual_efficiency_cost(cases_per_year).mul(years).expect("multiplication overflow");
-        self.upfront_cost.add(efficiency_cost).expect(CURRENCY_INVARIANT)
+        let efficiency_cost = self
+            .annual_efficiency_cost(cases_per_year)
+            .mul(years)
+            .expect("multiplication overflow");
+        self.upfront_cost
+            .add(efficiency_cost)
+            .expect(CURRENCY_INVARIANT)
     }
 }
 
@@ -163,8 +168,13 @@ impl ValueForMoneyOption {
 /// assert_eq!(*net.amount(), dec!(800_000));
 /// ```
 #[must_use]
-pub fn net_public_value(value_of_chosen_option: Money, value_of_next_best_alternative: Money) -> Money {
-    value_of_chosen_option.sub(value_of_next_best_alternative).expect(CURRENCY_INVARIANT)
+pub fn net_public_value(
+    value_of_chosen_option: Money,
+    value_of_next_best_alternative: Money,
+) -> Money {
+    value_of_chosen_option
+        .sub(value_of_next_best_alternative)
+        .expect(CURRENCY_INVARIANT)
 }
 
 /// The compound discount factor `(1 + rate)^years` used to bring a future sum to present value.
@@ -207,7 +217,9 @@ pub fn discount_factor(annual_rate: Decimal, years: u32) -> Decimal {
 /// ```
 #[must_use]
 pub fn present_value(future_value: Money, annual_rate: Decimal, years: u32) -> Money {
-    future_value.div(discount_factor(annual_rate, years)).expect("division by zero or overflow")
+    future_value
+        .div(discount_factor(annual_rate, years))
+        .expect("division by zero or overflow")
 }
 
 /// The Green Book's distributional weight for a pound of benefit accruing to a household at
@@ -234,7 +246,11 @@ pub fn present_value(future_value: Money, annual_rate: Decimal, years: u32) -> M
 /// assert!((weight.value() - 2.462).abs() < 0.01);
 /// ```
 #[must_use]
-pub fn distributional_weight(household_income: Money, average_income: Money, elasticity: f64) -> Ratio {
+pub fn distributional_weight(
+    household_income: Money,
+    average_income: Money,
+    elasticity: f64,
+) -> Ratio {
     // Weight(y) = (ȳ / y)^e, i.e. average over household — not household over average — so that
     // below-average incomes get a weight greater than 1.
     let ratio = money_ratio(average_income, household_income);
@@ -265,8 +281,11 @@ pub fn distributional_weight(household_income: Money, average_income: Money, ela
 /// ```
 #[must_use]
 pub fn weighted_benefit(unweighted_benefit: Money, weight: Ratio) -> Money {
-    let weight_decimal = Decimal::from_f64_retain(weight.value()).expect("finite weight converts to Decimal");
-    unweighted_benefit.mul(weight_decimal).expect("multiplication overflow")
+    let weight_decimal =
+        Decimal::from_f64_retain(weight.value()).expect("finite weight converts to Decimal");
+    unweighted_benefit
+        .mul(weight_decimal)
+        .expect("multiplication overflow")
 }
 
 /// Net additional outcomes once the deadweight rate (what would have happened anyway) is
@@ -412,4 +431,72 @@ pub fn leakage_adjustment(net_impact: f64, leakage_rate: Percentage) -> f64 {
 #[must_use]
 pub fn multiplier_effect(net_impact: f64, multiplier: f64) -> f64 {
     net_impact * multiplier
+}
+
+#[cfg(test)]
+mod boundary_tests {
+    use super::{StrategicTriangle, attribution_shares_valid};
+
+    #[test]
+    fn triangle_requires_each_corner_independently() {
+        let all = StrategicTriangle {
+            legitimacy_and_support: true,
+            public_value: true,
+            operational_capacity: true,
+        };
+        assert!(all.passes());
+        assert!(
+            !StrategicTriangle {
+                legitimacy_and_support: false,
+                ..all
+            }
+            .passes()
+        );
+        assert!(
+            !StrategicTriangle {
+                public_value: false,
+                ..all
+            }
+            .passes()
+        );
+        assert!(
+            !StrategicTriangle {
+                operational_capacity: false,
+                ..all
+            }
+            .passes()
+        );
+        assert!(
+            !StrategicTriangle {
+                legitimacy_and_support: true,
+                public_value: false,
+                operational_capacity: false
+            }
+            .passes()
+        );
+        assert!(
+            !StrategicTriangle {
+                legitimacy_and_support: false,
+                public_value: true,
+                operational_capacity: false
+            }
+            .passes()
+        );
+        assert!(
+            !StrategicTriangle {
+                legitimacy_and_support: false,
+                public_value: false,
+                operational_capacity: true
+            }
+            .passes()
+        );
+    }
+
+    #[test]
+    fn attribution_shares_may_equal_but_not_exceed_the_observed_total() {
+        assert!(attribution_shares_valid(&[10.0, 20.0], 30.0));
+        assert!(!attribution_shares_valid(&[10.0, 21.0], 30.0));
+        // Shares totalling less than the observed total are valid; the limit is not an exact match.
+        assert!(attribution_shares_valid(&[5.0], 30.0));
+    }
 }

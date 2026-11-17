@@ -38,7 +38,8 @@ pub type Money = rusty_money::Money<'static, iso::Currency>;
 /// crate. A currency mismatch here would mean the crate constructed a `Money` in a currency other
 /// than its single internal working currency (`USD`), which is a bug in the crate, not a runtime
 /// condition callers need to plan for.
-pub const CURRENCY_INVARIANT: &str = "public-value::units::Money always uses one internal working currency (USD)";
+pub const CURRENCY_INVARIANT: &str =
+    "public-value::units::Money always uses one internal working currency (USD)";
 
 /// The dimensionless ratio of `numerator` to `denominator` (`numerator / denominator`).
 ///
@@ -132,7 +133,7 @@ impl fmt::Display for Percentage {
 
 #[cfg(test)]
 mod tests {
-    use super::{Percentage, Ratio, iso, money_ratio, Money};
+    use super::{Money, Percentage, Ratio, iso, money_ratio};
     use rust_decimal_macros::dec;
 
     #[test]
@@ -161,5 +162,16 @@ mod tests {
         assert!((p.as_fraction() - 0.425).abs() < f64::EPSILON);
         assert!((p.as_percent() - 42.5).abs() < f64::EPSILON);
         assert_eq!(format!("{p}"), "42.5%");
+    }
+}
+
+#[cfg(test)]
+mod display_tests {
+    use super::Ratio;
+
+    #[test]
+    fn ratio_displays_with_two_decimal_places() {
+        assert_eq!(Ratio::new(1.436_28).to_string(), "1.44");
+        assert_eq!(Ratio::new(2.0).to_string(), "2.00");
     }
 }

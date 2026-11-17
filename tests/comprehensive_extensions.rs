@@ -26,13 +26,21 @@ fn qaly_and_nice_threshold() {
 
     let incremental_qalys = qalys_treatment - qalys_comparator;
     assert!((incremental_qalys - 1.4).abs() < 1e-9);
-    let incremental_cost = Money::from_decimal(dec!(100_000), iso::USD).sub(Money::from_decimal(dec!(30_000), iso::USD)).unwrap();
+    let incremental_cost = Money::from_decimal(dec!(100_000), iso::USD)
+        .sub(Money::from_decimal(dec!(30_000), iso::USD))
+        .unwrap();
     assert_eq!(*incremental_cost.amount(), dec!(70_000));
 
     let cost_per_incremental_qaly = incremental_cost.div(dec!(1.4)).unwrap(); // £70,000 / 1.4 QALYs
     assert!((cost_per_incremental_qaly.amount() - dec!(50_000)).abs() < dec!(1));
-    assert!(clears_qaly_threshold(cost_per_incremental_qaly, Money::from_decimal(dec!(51_000), iso::USD)));
-    assert!(!clears_qaly_threshold(cost_per_incremental_qaly, Money::from_decimal(dec!(35_000), iso::USD)));
+    assert!(clears_qaly_threshold(
+        cost_per_incremental_qaly,
+        Money::from_decimal(dec!(51_000), iso::USD)
+    ));
+    assert!(!clears_qaly_threshold(
+        cost_per_incremental_qaly,
+        Money::from_decimal(dec!(35_000), iso::USD)
+    ));
 }
 
 /// DALY: years of life lost plus years lived with disability.
@@ -108,11 +116,19 @@ fn leakage_and_multiplier_effect() {
 /// `social-discount-rate`'s pitfall against mixing real and nominal cash flows.
 #[test]
 fn real_value_price_index_conversion() {
-    let real = real_value(Money::from_decimal(dec!(1_150_000), iso::USD), dec!(100), dec!(115));
+    let real = real_value(
+        Money::from_decimal(dec!(1_150_000), iso::USD),
+        dec!(100),
+        dec!(115),
+    );
     assert_eq!(*real.amount(), dec!(1_000_000));
 
     // A price index unchanged from the base year leaves the nominal value untouched.
-    let unchanged = real_value(Money::from_decimal(dec!(500_000), iso::USD), dec!(100), dec!(100));
+    let unchanged = real_value(
+        Money::from_decimal(dec!(500_000), iso::USD),
+        dec!(100),
+        dec!(100),
+    );
     assert_eq!(*unchanged.amount(), dec!(500_000));
 }
 

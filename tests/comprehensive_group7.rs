@@ -18,7 +18,9 @@ fn gdp_alternatives_examples() {
     let gpi = genuine_progress_indicator(
         Money::from_decimal(dec!(50), iso::USD),
         Money::from_decimal(dec!(12), iso::USD),
-        Money::from_decimal(dec!(3), iso::USD).add(Money::from_decimal(dec!(4), iso::USD)).unwrap(),
+        Money::from_decimal(dec!(3), iso::USD)
+            .add(Money::from_decimal(dec!(4), iso::USD))
+            .unwrap(),
         Money::from_decimal(dec!(6), iso::USD),
     );
     assert_eq!(*gpi.amount(), dec!(49));
@@ -58,8 +60,14 @@ fn multidimensional_poverty_index_examples() {
     let mpi = multidimensional_poverty_index(h, Percentage::from_percent(45.0));
     assert!((mpi - 0.1575).abs() < 0.0001);
 
-    let mpi_district_a = multidimensional_poverty_index(Percentage::from_percent(30.0), Percentage::from_percent(40.0));
-    let mpi_district_b = multidimensional_poverty_index(Percentage::from_percent(30.0), Percentage::from_percent(60.0));
+    let mpi_district_a = multidimensional_poverty_index(
+        Percentage::from_percent(30.0),
+        Percentage::from_percent(40.0),
+    );
+    let mpi_district_b = multidimensional_poverty_index(
+        Percentage::from_percent(30.0),
+        Percentage::from_percent(60.0),
+    );
     assert!((mpi_district_a - 0.120).abs() < 0.0001);
     assert!((mpi_district_b - 0.180).abs() < 0.0001);
     assert!(mpi_district_b > mpi_district_a);
@@ -102,8 +110,14 @@ fn index_of_multiple_deprivation_lsoa_example() {
 /// 6-point gap) is a larger relative deficit than trust (a 4-point gap).
 #[test]
 fn social_capital_metrics_neighbourhood_snapshot() {
-    let trust_gap = social_capital_pillar_gap(Percentage::from_percent(41.0), Percentage::from_percent(45.0));
-    let civic_engagement_gap = social_capital_pillar_gap(Percentage::from_percent(24.0), Percentage::from_percent(30.0));
+    let trust_gap = social_capital_pillar_gap(
+        Percentage::from_percent(41.0),
+        Percentage::from_percent(45.0),
+    );
+    let civic_engagement_gap = social_capital_pillar_gap(
+        Percentage::from_percent(24.0),
+        Percentage::from_percent(30.0),
+    );
 
     assert!((trust_gap.as_percent() - 4.0).abs() < 0.01);
     assert!((civic_engagement_gap.as_percent() - 6.0).abs() < 0.01);
@@ -114,8 +128,12 @@ fn social_capital_metrics_neighbourhood_snapshot() {
 /// carbon-storage value over a 50-year horizon at 3.5%.
 #[test]
 fn natural_capital_accounting_urban_woodland() {
-    let recreational_annual = Money::from_decimal(dec!(3), iso::USD).mul(80_000_u32).unwrap();
-    let carbon_annual = Money::from_decimal(dec!(75), iso::USD).mul(400_u32).unwrap();
+    let recreational_annual = Money::from_decimal(dec!(3), iso::USD)
+        .mul(80_000_u32)
+        .unwrap();
+    let carbon_annual = Money::from_decimal(dec!(75), iso::USD)
+        .mul(400_u32)
+        .unwrap();
 
     let recreational_asset = ecosystem_asset_value(recreational_annual, dec!(0.035), 50);
     let carbon_asset = ecosystem_asset_value(carbon_annual, dec!(0.035), 50);
@@ -131,9 +149,18 @@ fn natural_capital_accounting_urban_woodland() {
 /// roughly eightfold.
 #[test]
 fn intergenerational_equity_three_discounting_regimes() {
-    let flat = present_value_across_schedule(Money::from_decimal(dec!(1), iso::USD), &[(dec!(0.035), 100)]);
-    let declining = present_value_across_schedule(Money::from_decimal(dec!(1), iso::USD), &[(dec!(0.035), 30), (dec!(0.03), 45), (dec!(0.025), 25)]);
-    let stern = present_value_across_schedule(Money::from_decimal(dec!(1), iso::USD), &[(dec!(0.014), 100)]);
+    let flat = present_value_across_schedule(
+        Money::from_decimal(dec!(1), iso::USD),
+        &[(dec!(0.035), 100)],
+    );
+    let declining = present_value_across_schedule(
+        Money::from_decimal(dec!(1), iso::USD),
+        &[(dec!(0.035), 30), (dec!(0.03), 45), (dec!(0.025), 25)],
+    );
+    let stern = present_value_across_schedule(
+        Money::from_decimal(dec!(1), iso::USD),
+        &[(dec!(0.014), 100)],
+    );
 
     assert!((flat.amount() - dec!(0.032)).abs() < dec!(0.001));
     assert!((declining.amount() - dec!(0.051)).abs() < dec!(0.001));

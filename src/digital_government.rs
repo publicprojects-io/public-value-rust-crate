@@ -76,7 +76,11 @@ pub fn prorate_annual_value(annual_value: Money, delay_months: u32) -> Money {
 /// assert_eq!(*total.amount(), dec!(49_610));
 /// ```
 #[must_use]
-pub fn failed_assessment_cost(remediation_cost: Money, redesign_cost: Money, prorated_delay_cost: Money) -> Money {
+pub fn failed_assessment_cost(
+    remediation_cost: Money,
+    redesign_cost: Money,
+    prorated_delay_cost: Money,
+) -> Money {
     remediation_cost
         .add(redesign_cost)
         .expect(CURRENCY_INVARIANT)
@@ -110,7 +114,11 @@ pub fn failed_assessment_cost(remediation_cost: Money, redesign_cost: Money, pro
 /// assert_eq!(*gross.amount(), dec!(237_900.00));
 /// ```
 #[must_use]
-pub fn gross_channel_shift_saving(shifted_volume: u32, old_channel_cost: Money, new_channel_cost: Money) -> Money {
+pub fn gross_channel_shift_saving(
+    shifted_volume: u32,
+    old_channel_cost: Money,
+    new_channel_cost: Money,
+) -> Money {
     old_channel_cost
         .sub(new_channel_cost)
         .expect(CURRENCY_INVARIANT)
@@ -171,10 +179,18 @@ pub fn blended_cost_per_transaction(
     self_service_cohort: u32,
     self_service_cost: Money,
 ) -> Money {
-    let assisted_total = assisted_digital_cost.mul(assisted_digital_cohort).expect("multiplication overflow");
-    let self_service_total = self_service_cost.mul(self_service_cohort).expect("multiplication overflow");
-    let total_cost = assisted_total.add(self_service_total).expect(CURRENCY_INVARIANT);
-    total_cost.div(assisted_digital_cohort + self_service_cohort).expect("division by zero or overflow")
+    let assisted_total = assisted_digital_cost
+        .mul(assisted_digital_cohort)
+        .expect("multiplication overflow");
+    let self_service_total = self_service_cost
+        .mul(self_service_cohort)
+        .expect("multiplication overflow");
+    let total_cost = assisted_total
+        .add(self_service_total)
+        .expect(CURRENCY_INVARIANT);
+    total_cost
+        .div(assisted_digital_cohort + self_service_cohort)
+        .expect("division by zero or overflow")
 }
 
 /// The first-year saving from adopting a shared platform component instead of building an
@@ -198,8 +214,13 @@ pub fn blended_cost_per_transaction(
 /// assert_eq!(*saving.amount(), dec!(73_000));
 /// ```
 #[must_use]
-pub fn platform_adoption_saving(build_your_own_cost: Money, platform_integration_cost: Money) -> Money {
-    build_your_own_cost.sub(platform_integration_cost).expect(CURRENCY_INVARIANT)
+pub fn platform_adoption_saving(
+    build_your_own_cost: Money,
+    platform_integration_cost: Money,
+) -> Money {
+    build_your_own_cost
+        .sub(platform_integration_cost)
+        .expect(CURRENCY_INVARIANT)
 }
 
 /// The cost-avoided lower-bound estimate of open data value: what adopting organizations would
@@ -224,8 +245,13 @@ pub fn platform_adoption_saving(build_your_own_cost: Money, platform_integration
 /// assert_eq!(*value.amount(), dec!(60_000_000));
 /// ```
 #[must_use]
-pub fn cost_avoided_open_data_value(organizations_avoiding_a_licence: u32, avoided_annual_licence_cost: Money) -> Money {
-    avoided_annual_licence_cost.mul(organizations_avoiding_a_licence).expect("multiplication overflow")
+pub fn cost_avoided_open_data_value(
+    organizations_avoiding_a_licence: u32,
+    avoided_annual_licence_cost: Money,
+) -> Money {
+    avoided_annual_licence_cost
+        .mul(organizations_avoiding_a_licence)
+        .expect("multiplication overflow")
 }
 
 /// Annualized Loss Expectancy (ALE): the single loss expectancy of a breach, times its annualized
@@ -250,9 +276,15 @@ pub fn cost_avoided_open_data_value(organizations_avoiding_a_licence: u32, avoid
 /// assert_eq!(ale.amount().round_dp(2), dec!(168_000.00));
 /// ```
 #[must_use]
-pub fn annualized_loss_expectancy(single_loss_expectancy: Money, annual_rate_of_occurrence: Percentage) -> Money {
-    let rate = Decimal::from_f64_retain(annual_rate_of_occurrence.as_fraction()).expect("finite rate converts to Decimal");
-    single_loss_expectancy.mul(rate).expect("multiplication overflow")
+pub fn annualized_loss_expectancy(
+    single_loss_expectancy: Money,
+    annual_rate_of_occurrence: Percentage,
+) -> Money {
+    let rate = Decimal::from_f64_retain(annual_rate_of_occurrence.as_fraction())
+        .expect("finite rate converts to Decimal");
+    single_loss_expectancy
+        .mul(rate)
+        .expect("multiplication overflow")
 }
 
 /// The value of a proposed security control: the ALE it removes, minus its own annual cost. A
@@ -275,9 +307,17 @@ pub fn annualized_loss_expectancy(single_loss_expectancy: Money, annual_rate_of_
 /// assert_eq!(*value.amount(), dec!(60_000));
 /// ```
 #[must_use]
-pub fn security_control_value(ale_before_control: Money, ale_after_control: Money, annual_control_cost: Money) -> Money {
-    let ale_removed = ale_before_control.sub(ale_after_control).expect(CURRENCY_INVARIANT);
-    ale_removed.sub(annual_control_cost).expect(CURRENCY_INVARIANT)
+pub fn security_control_value(
+    ale_before_control: Money,
+    ale_after_control: Money,
+    annual_control_cost: Money,
+) -> Money {
+    let ale_removed = ale_before_control
+        .sub(ale_after_control)
+        .expect(CURRENCY_INVARIANT);
+    ale_removed
+        .sub(annual_control_cost)
+        .expect(CURRENCY_INVARIANT)
 }
 
 /// The staff-time cost of handling a volume of enquiries at a given average handling time and
@@ -302,7 +342,11 @@ pub fn security_control_value(ale_before_control: Money, ale_after_control: Mone
 /// assert_eq!(baseline.amount().round_dp(2), dec!(198_333.33));
 /// ```
 #[must_use]
-pub fn handling_time_cost(enquiries: u32, minutes_per_enquiry: Decimal, loaded_hourly_cost: Money) -> Money {
+pub fn handling_time_cost(
+    enquiries: u32,
+    minutes_per_enquiry: Decimal,
+    loaded_hourly_cost: Money,
+) -> Money {
     let hours_per_enquiry = minutes_per_enquiry / Decimal::from(60);
     loaded_hourly_cost
         .mul(hours_per_enquiry)
@@ -334,11 +378,48 @@ pub fn handling_time_cost(enquiries: u32, minutes_per_enquiry: Decimal, loaded_h
 /// assert_eq!(net.amount().round_dp(0), dec!(61_333));
 /// ```
 #[must_use]
-pub fn net_ai_value(baseline_cost: Money, production_review_cost: Money, licence_and_compute_cost: Money, documentation_cost: Money) -> Money {
+pub fn net_ai_value(
+    baseline_cost: Money,
+    production_review_cost: Money,
+    licence_and_compute_cost: Money,
+    documentation_cost: Money,
+) -> Money {
     let production_cost = production_review_cost
         .add(licence_and_compute_cost)
         .expect(CURRENCY_INVARIANT)
         .add(documentation_cost)
         .expect(CURRENCY_INVARIANT);
-    baseline_cost.sub(production_cost).expect(CURRENCY_INVARIANT)
+    baseline_cost
+        .sub(production_cost)
+        .expect(CURRENCY_INVARIANT)
+}
+
+#[cfg(test)]
+mod boundary_tests {
+    use super::{ServiceAssessment, fte_released};
+
+    #[test]
+    fn assessment_passes_only_when_all_points_met() {
+        assert!(
+            ServiceAssessment {
+                points_met: 14,
+                total_points: 14
+            }
+            .passes()
+        );
+        assert!(
+            !ServiceAssessment {
+                points_met: 13,
+                total_points: 14
+            }
+            .passes()
+        );
+    }
+
+    #[test]
+    fn fte_released_rounds_down_and_can_be_zero_or_many() {
+        assert_eq!(fte_released(14_000, 8_000), 1);
+        assert_eq!(fte_released(7_999, 8_000), 0);
+        assert_eq!(fte_released(40_000, 8_000), 5);
+    }
 }

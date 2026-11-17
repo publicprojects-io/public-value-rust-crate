@@ -30,7 +30,9 @@ use crate::units::{CURRENCY_INVARIANT, Money, Percentage, Ratio, money_ratio};
 /// ```
 #[must_use]
 pub fn cost_of_delay_per_week(annual_benefit: Money) -> Money {
-    annual_benefit.div(Decimal::from(52)).expect("division by zero or overflow")
+    annual_benefit
+        .div(Decimal::from(52))
+        .expect("division by zero or overflow")
 }
 
 /// The total value lost to a delay: weekly Cost of Delay times the number of weeks slipped.
@@ -54,7 +56,9 @@ pub fn cost_of_delay_per_week(annual_benefit: Money) -> Money {
 /// ```
 #[must_use]
 pub fn total_delay_loss(cost_of_delay_per_week: Money, delay_weeks: u32) -> Money {
-    cost_of_delay_per_week.mul(delay_weeks).expect("multiplication overflow")
+    cost_of_delay_per_week
+        .mul(delay_weeks)
+        .expect("multiplication overflow")
 }
 
 /// A cycle time via Little's Law: work in progress divided by throughput.
@@ -99,7 +103,11 @@ pub fn cycle_time(work_in_progress: u32, throughput_per_period: u32) -> f64 {
 /// assert!((efficiency.as_percent() - 1.3).abs() < 0.05);
 /// ```
 #[must_use]
-pub fn flow_efficiency(active_time_hours: f64, total_cycle_time_days: f64, working_hours_per_day: f64) -> Percentage {
+pub fn flow_efficiency(
+    active_time_hours: f64,
+    total_cycle_time_days: f64,
+    working_hours_per_day: f64,
+) -> Percentage {
     Percentage::from_fraction(active_time_hours / (total_cycle_time_days * working_hours_per_day))
 }
 
@@ -124,7 +132,9 @@ pub fn flow_efficiency(active_time_hours: f64, total_cycle_time_days: f64, worki
 /// ```
 #[must_use]
 pub fn technical_debt_principal(lines_of_code: u32, remediation_cost_per_line: Money) -> Money {
-    remediation_cost_per_line.mul(lines_of_code).expect("multiplication overflow")
+    remediation_cost_per_line
+        .mul(lines_of_code)
+        .expect("multiplication overflow")
 }
 
 /// The technical debt ratio: remediation cost as a fraction of full redevelopment cost
@@ -178,8 +188,11 @@ pub fn technical_debt_ratio(remediation_cost: Money, redevelopment_cost: Money) 
 /// ```
 #[must_use]
 pub fn interest_reduction(current_annual_interest: Money, reduction_fraction: Percentage) -> Money {
-    let fraction = Decimal::from_f64_retain(reduction_fraction.as_fraction()).expect("finite fraction converts to Decimal");
-    current_annual_interest.mul(fraction).expect("multiplication overflow")
+    let fraction = Decimal::from_f64_retain(reduction_fraction.as_fraction())
+        .expect("finite fraction converts to Decimal");
+    current_annual_interest
+        .mul(fraction)
+        .expect("multiplication overflow")
 }
 
 /// The payback period, in years, of a remediation cost against its annual interest reduction.
@@ -216,9 +229,18 @@ pub fn payback_period_years(remediation_cost: Money, annual_interest_reduction: 
 /// assert!((tco_a.amount() - dec!(4_628_763)).abs() < dec!(1_000));
 /// ```
 #[must_use]
-pub fn total_cost_of_ownership(acquisition_cost: Money, annual_operating_cost: Money, annual_rate: Decimal, years: u32) -> Money {
-    let operating_cost_pv = annual_operating_cost.mul(annuity_factor(annual_rate, years)).expect("multiplication overflow");
-    acquisition_cost.add(operating_cost_pv).expect(CURRENCY_INVARIANT)
+pub fn total_cost_of_ownership(
+    acquisition_cost: Money,
+    annual_operating_cost: Money,
+    annual_rate: Decimal,
+    years: u32,
+) -> Money {
+    let operating_cost_pv = annual_operating_cost
+        .mul(annuity_factor(annual_rate, years))
+        .expect("multiplication overflow");
+    acquisition_cost
+        .add(operating_cost_pv)
+        .expect(CURRENCY_INVARIANT)
 }
 
 /// A risk-adjusted build cost: the raw estimate scaled by an optimism-bias uplift multiplier (the
@@ -241,8 +263,13 @@ pub fn total_cost_of_ownership(acquisition_cost: Money, annual_operating_cost: M
 /// assert_eq!(*adjusted.amount(), dec!(1_260_000.0));
 /// ```
 #[must_use]
-pub fn risk_adjusted_build_cost(build_cost_estimate: Money, optimism_bias_multiplier: Decimal) -> Money {
-    build_cost_estimate.mul(optimism_bias_multiplier).expect("multiplication overflow")
+pub fn risk_adjusted_build_cost(
+    build_cost_estimate: Money,
+    optimism_bias_multiplier: Decimal,
+) -> Money {
+    build_cost_estimate
+        .mul(optimism_bias_multiplier)
+        .expect("multiplication overflow")
 }
 
 /// The total subscription cost of a "buy" option over `years`.
@@ -265,7 +292,9 @@ pub fn risk_adjusted_build_cost(build_cost_estimate: Money, optimism_bias_multip
 /// ```
 #[must_use]
 pub fn buy_total_cost(annual_subscription: Money, years: u32) -> Money {
-    annual_subscription.mul(years).expect("multiplication overflow")
+    annual_subscription
+        .mul(years)
+        .expect("multiplication overflow")
 }
 
 /// A benefits realization rate: benefits actually realized divided by the benefits forecast at
@@ -339,10 +368,22 @@ pub fn eligible_developers(total_developers: u32, eligible_share: Percentage) ->
 /// assert_eq!(value.amount().round_dp(0), dec!(304_920));
 /// ```
 #[must_use]
-pub fn ai_capacity_value(eligible_developers: u32, hours_saved_per_day: f64, working_days_per_year: u32, loaded_hourly_rate: Money, utilization: Percentage) -> Money {
-    let total_hours = f64::from(eligible_developers) * hours_saved_per_day * f64::from(working_days_per_year) * utilization.as_fraction();
-    let hours_decimal = Decimal::from_f64_retain(total_hours).expect("finite hours total converts to Decimal");
-    loaded_hourly_rate.mul(hours_decimal).expect("multiplication overflow")
+pub fn ai_capacity_value(
+    eligible_developers: u32,
+    hours_saved_per_day: f64,
+    working_days_per_year: u32,
+    loaded_hourly_rate: Money,
+    utilization: Percentage,
+) -> Money {
+    let total_hours = f64::from(eligible_developers)
+        * hours_saved_per_day
+        * f64::from(working_days_per_year)
+        * utilization.as_fraction();
+    let hours_decimal =
+        Decimal::from_f64_retain(total_hours).expect("finite hours total converts to Decimal");
+    loaded_hourly_rate
+        .mul(hours_decimal)
+        .expect("multiplication overflow")
 }
 
 /// The net capacity ratio: measured AI capacity value divided by licensing cost.
@@ -394,9 +435,18 @@ pub fn net_capacity_ratio(capacity_value: Money, licensing_cost: Money) -> Ratio
 /// assert!((value.amount() - dec!(1_457_143)).abs() < dec!(1_000));
 /// ```
 #[must_use]
-pub fn lead_time_value_pulled_forward(improvements_per_year: u32, lead_time_reduction_weeks: f64, weekly_cost_of_delay: Money) -> Money {
-    let weeks = Decimal::from_f64_retain(lead_time_reduction_weeks).expect("finite weeks converts to Decimal");
-    weekly_cost_of_delay.mul(weeks).expect("multiplication overflow").mul(improvements_per_year).expect("multiplication overflow")
+pub fn lead_time_value_pulled_forward(
+    improvements_per_year: u32,
+    lead_time_reduction_weeks: f64,
+    weekly_cost_of_delay: Money,
+) -> Money {
+    let weeks = Decimal::from_f64_retain(lead_time_reduction_weeks)
+        .expect("finite weeks converts to Decimal");
+    weekly_cost_of_delay
+        .mul(weeks)
+        .expect("multiplication overflow")
+        .mul(improvements_per_year)
+        .expect("multiplication overflow")
 }
 
 /// The number of fewer failed changes per year from a change-failure-rate improvement: changes
@@ -415,8 +465,13 @@ pub fn lead_time_value_pulled_forward(improvements_per_year: u32, lead_time_redu
 /// assert!((fewer - 5.0).abs() < 1e-9);
 /// ```
 #[must_use]
-pub fn fewer_failed_changes(changes_per_year: u32, failure_rate_before: Percentage, failure_rate_after: Percentage) -> f64 {
-    f64::from(changes_per_year) * (failure_rate_before.as_fraction() - failure_rate_after.as_fraction())
+pub fn fewer_failed_changes(
+    changes_per_year: u32,
+    failure_rate_before: Percentage,
+    failure_rate_after: Percentage,
+) -> f64 {
+    f64::from(changes_per_year)
+        * (failure_rate_before.as_fraction() - failure_rate_after.as_fraction())
 }
 
 /// The saving from avoiding failed changes: fewer failures times the cost each one causes (e.g.
@@ -442,8 +497,11 @@ pub fn fewer_failed_changes(changes_per_year: u32, failure_rate_before: Percenta
 /// ```
 #[must_use]
 pub fn incident_avoidance_saving(fewer_failures: f64, cost_per_incident: Money) -> Money {
-    let count = Decimal::from_f64_retain(fewer_failures).expect("finite failure count converts to Decimal");
-    cost_per_incident.mul(count).expect("multiplication overflow")
+    let count =
+        Decimal::from_f64_retain(fewer_failures).expect("finite failure count converts to Decimal");
+    cost_per_incident
+        .mul(count)
+        .expect("multiplication overflow")
 }
 
 /// The aggregate WELLBY loss from a delay, reusing [`crate::economic_appraisal::wellbys`] with a
@@ -462,6 +520,10 @@ pub fn incident_avoidance_saving(fewer_failures: f64, cost_per_incident: Money) 
 /// assert!((loss - 1_080.0).abs() < 1e-6);
 /// ```
 #[must_use]
-pub fn delay_wellby_loss(claimants_affected: u32, extra_weeks: f64, wellby_loss_per_week: f64) -> f64 {
+pub fn delay_wellby_loss(
+    claimants_affected: u32,
+    extra_weeks: f64,
+    wellby_loss_per_week: f64,
+) -> f64 {
     wellbys(claimants_affected, extra_weeks * wellby_loss_per_week, 1.0)
 }

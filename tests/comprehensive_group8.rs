@@ -31,13 +31,19 @@ fn cost_of_delay_examples() {
 #[test]
 fn dora_metrics_benefits_claims_portal() {
     let weeks_saved = 8.0 - 5.0 / 7.0;
-    let lead_time_value = lead_time_value_pulled_forward(25, weeks_saved, Money::from_decimal(dec!(8_000), iso::USD));
+    let lead_time_value =
+        lead_time_value_pulled_forward(25, weeks_saved, Money::from_decimal(dec!(8_000), iso::USD));
     assert!((lead_time_value.amount() - dec!(1_457_143)).abs() < dec!(1_000));
 
-    let fewer_failures = fewer_failed_changes(25, Percentage::from_percent(30.0), Percentage::from_percent(10.0));
+    let fewer_failures = fewer_failed_changes(
+        25,
+        Percentage::from_percent(30.0),
+        Percentage::from_percent(10.0),
+    );
     assert!((fewer_failures - 5.0).abs() < 1e-9);
 
-    let saving = incident_avoidance_saving(fewer_failures, Money::from_decimal(dec!(16_840), iso::USD));
+    let saving =
+        incident_avoidance_saving(fewer_failures, Money::from_decimal(dec!(16_840), iso::USD));
     assert_eq!(*saving.amount(), dec!(84_200));
 }
 
@@ -63,8 +69,14 @@ fn technical_debt_legacy_claims_engine() {
     let principal = technical_debt_principal(250_000, Money::from_decimal(dec!(2.85), iso::USD));
     assert_eq!(*principal.amount(), dec!(712_500.00));
 
-    let redirected_contact_cost = Money::from_decimal(dec!(25), iso::USD).mul(5_000_u32).unwrap().mul(4_u32).unwrap();
-    let interest = Money::from_decimal(dec!(180_000), iso::USD).add(redirected_contact_cost).unwrap();
+    let redirected_contact_cost = Money::from_decimal(dec!(25), iso::USD)
+        .mul(5_000_u32)
+        .unwrap()
+        .mul(4_u32)
+        .unwrap();
+    let interest = Money::from_decimal(dec!(180_000), iso::USD)
+        .add(redirected_contact_cost)
+        .unwrap();
     assert_eq!(*interest.amount(), dec!(680_000));
 
     let reduction = interest_reduction(interest, Percentage::from_percent(70.0));
@@ -78,8 +90,18 @@ fn technical_debt_legacy_claims_engine() {
 /// cheaper on capex alone but is marginally more expensive once TCO is discounted and summed.
 #[test]
 fn total_cost_of_ownership_two_systems() {
-    let tco_a = total_cost_of_ownership(Money::from_decimal(dec!(3_500_000), iso::USD), Money::from_decimal(dec!(250_000), iso::USD), dec!(0.035), 5);
-    let tco_b = total_cost_of_ownership(Money::from_decimal(dec!(1_800_000), iso::USD), Money::from_decimal(dec!(650_000), iso::USD), dec!(0.035), 5);
+    let tco_a = total_cost_of_ownership(
+        Money::from_decimal(dec!(3_500_000), iso::USD),
+        Money::from_decimal(dec!(250_000), iso::USD),
+        dec!(0.035),
+        5,
+    );
+    let tco_b = total_cost_of_ownership(
+        Money::from_decimal(dec!(1_800_000), iso::USD),
+        Money::from_decimal(dec!(650_000), iso::USD),
+        dec!(0.035),
+        5,
+    );
 
     assert!((tco_a.amount() - dec!(4_628_763)).abs() < dec!(1_000));
     assert!((tco_b.amount() - dec!(4_734_784)).abs() < dec!(1_000));
@@ -90,11 +112,20 @@ fn total_cost_of_ownership_two_systems() {
 /// wins by roughly £1.5m over five years once risk adjustment and delay cost are counted.
 #[test]
 fn build_vs_buy_case_management_system() {
-    let risk_adjusted_build = risk_adjusted_build_cost(Money::from_decimal(dec!(900_000), iso::USD), dec!(1.4));
+    let risk_adjusted_build =
+        risk_adjusted_build_cost(Money::from_decimal(dec!(900_000), iso::USD), dec!(1.4));
     assert_eq!(*risk_adjusted_build.amount(), dec!(1_260_000.0));
 
-    let build_five_year_tco = risk_adjusted_build.add(Money::from_decimal(dec!(150_000), iso::USD).mul(5_u32).unwrap()).unwrap();
-    let delay_cost = Money::from_decimal(dec!(40_000), iso::USD).mul(10_u32).unwrap();
+    let build_five_year_tco = risk_adjusted_build
+        .add(
+            Money::from_decimal(dec!(150_000), iso::USD)
+                .mul(5_u32)
+                .unwrap(),
+        )
+        .unwrap();
+    let delay_cost = Money::from_decimal(dec!(40_000), iso::USD)
+        .mul(10_u32)
+        .unwrap();
     let effective_build_cost = build_five_year_tco.add(delay_cost).unwrap();
 
     let buy_cost = buy_total_cost(Money::from_decimal(dec!(180_000), iso::USD), 5);
@@ -128,10 +159,20 @@ fn ai_productivity_department_pilot() {
     let eligible = eligible_developers(300, Percentage::from_percent(70.0));
     assert_eq!(eligible, 210);
 
-    let value = ai_capacity_value(eligible, 0.2, 220, Money::from_decimal(dec!(55), iso::USD), Percentage::from_percent(60.0));
+    let value = ai_capacity_value(
+        eligible,
+        0.2,
+        220,
+        Money::from_decimal(dec!(55), iso::USD),
+        Percentage::from_percent(60.0),
+    );
     assert_eq!(value.amount().round_dp(0), dec!(304_920));
 
-    let licensing_cost = Money::from_decimal(dec!(22), iso::USD).mul(12_u32).unwrap().mul(eligible).unwrap();
+    let licensing_cost = Money::from_decimal(dec!(22), iso::USD)
+        .mul(12_u32)
+        .unwrap()
+        .mul(eligible)
+        .unwrap();
     assert_eq!(*licensing_cost.amount(), dec!(55_440));
 
     let ratio = net_capacity_ratio(value, licensing_cost);

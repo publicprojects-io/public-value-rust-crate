@@ -31,7 +31,9 @@ use crate::units::{CURRENCY_INVARIANT, Money, Percentage};
 /// ```
 #[must_use]
 pub fn kpi_percentage(observations_meeting_target: u32, total_observations: u32) -> Percentage {
-    Percentage::from_fraction(f64::from(observations_meeting_target) / f64::from(total_observations))
+    Percentage::from_fraction(
+        f64::from(observations_meeting_target) / f64::from(total_observations),
+    )
 }
 
 /// A public value scorecard for one service: one headline indicator per Kaplan-and-Norton-derived
@@ -87,7 +89,10 @@ impl PublicValueScorecard {
     #[must_use]
     pub fn looks_like_a_success_on_headline_numbers(&self) -> bool {
         self.mission_outcome_rate.as_fraction() >= self.mission_outcome_target.as_fraction()
-            && self.stewardship_cost_per_episode.lte(&self.stewardship_budgeted_cost_per_episode).expect(CURRENCY_INVARIANT)
+            && self
+                .stewardship_cost_per_episode
+                .lte(&self.stewardship_budgeted_cost_per_episode)
+                .expect(CURRENCY_INVARIANT)
     }
 
     /// True if the process perspective shows a staffing risk the mission and stewardship numbers
@@ -200,9 +205,15 @@ pub fn payment_by_results_total(
     outcome_count: u32,
     outcome_unit_price: Money,
 ) -> Money {
-    let activity_payment = activity_unit_price.mul(activity_count).expect("multiplication overflow");
-    let outcome_payment = outcome_unit_price.mul(outcome_count).expect("multiplication overflow");
-    activity_payment.add(outcome_payment).expect(CURRENCY_INVARIANT)
+    let activity_payment = activity_unit_price
+        .mul(activity_count)
+        .expect("multiplication overflow");
+    let outcome_payment = outcome_unit_price
+        .mul(outcome_count)
+        .expect("multiplication overflow");
+    activity_payment
+        .add(outcome_payment)
+        .expect(CURRENCY_INVARIANT)
 }
 
 /// A quality-adjusted output index: a base index scaled by activity growth and a quality
@@ -221,7 +232,11 @@ pub fn payment_by_results_total(
 /// assert!((index - 101.97).abs() < 0.01);
 /// ```
 #[must_use]
-pub fn quality_adjusted_output_index(base_index: f64, activity_growth: f64, quality_adjustment: f64) -> f64 {
+pub fn quality_adjusted_output_index(
+    base_index: f64,
+    activity_growth: f64,
+    quality_adjustment: f64,
+) -> f64 {
     base_index * (1.0 + activity_growth) * (1.0 + quality_adjustment)
 }
 
@@ -247,8 +262,13 @@ pub fn quality_adjusted_output_index(base_index: f64, activity_growth: f64, qual
 /// assert!((growth - -1.23).abs() < 0.01);
 /// ```
 #[must_use]
-pub fn productivity_growth_percentage_points(quality_adjusted_output_index: f64, input_index: f64, base_index: f64) -> f64 {
-    (quality_adjusted_output_index / base_index - 1.0) * 100.0 - (input_index / base_index - 1.0) * 100.0
+pub fn productivity_growth_percentage_points(
+    quality_adjusted_output_index: f64,
+    input_index: f64,
+    base_index: f64,
+) -> f64 {
+    (quality_adjusted_output_index / base_index - 1.0) * 100.0
+        - (input_index / base_index - 1.0) * 100.0
 }
 
 /// Net satisfaction: the share satisfied minus the share dissatisfied, both out of total
@@ -284,7 +304,9 @@ pub fn net_satisfaction(satisfied: u32, dissatisfied: u32, total_respondents: u3
 /// Panics if `completed_transactions` is zero.
 #[must_use]
 pub fn cost_per_transaction(total_running_cost: Money, completed_transactions: u32) -> Money {
-    total_running_cost.div(completed_transactions).expect("division by zero or overflow")
+    total_running_cost
+        .div(completed_transactions)
+        .expect("division by zero or overflow")
 }
 
 /// The channel-shift saving from moving a share of transaction volume onto a cheaper channel: the
@@ -310,8 +332,14 @@ pub fn cost_per_transaction(total_running_cost: Money, completed_transactions: u
 /// assert_eq!(saving.amount().round_dp(2), dec!(1_350_000.00));
 /// ```
 #[must_use]
-pub fn channel_shift_saving(transaction_volume: u32, take_up_shift: Percentage, old_channel_cost: Money, new_channel_cost: Money) -> Money {
-    let shift_fraction = Decimal::from_f64_retain(take_up_shift.as_fraction()).expect("finite take-up shift converts to Decimal");
+pub fn channel_shift_saving(
+    transaction_volume: u32,
+    take_up_shift: Percentage,
+    old_channel_cost: Money,
+    new_channel_cost: Money,
+) -> Money {
+    let shift_fraction = Decimal::from_f64_retain(take_up_shift.as_fraction())
+        .expect("finite take-up shift converts to Decimal");
     old_channel_cost
         .sub(new_channel_cost)
         .expect(CURRENCY_INVARIANT)
@@ -343,9 +371,13 @@ pub fn channel_shift_saving(transaction_volume: u32, take_up_shift: Percentage, 
 /// assert_eq!(before.amount().round_dp(2), dec!(420_000.00));
 /// ```
 #[must_use]
-pub fn failure_demand_cost(channel_attempts: u32, completion_rate: Percentage, fallback_channel_cost: Money) -> Money {
-    let non_completing_fraction =
-        Decimal::from_f64_retain(1.0 - completion_rate.as_fraction()).expect("finite completion rate converts to Decimal");
+pub fn failure_demand_cost(
+    channel_attempts: u32,
+    completion_rate: Percentage,
+    fallback_channel_cost: Money,
+) -> Money {
+    let non_completing_fraction = Decimal::from_f64_retain(1.0 - completion_rate.as_fraction())
+        .expect("finite completion rate converts to Decimal");
     fallback_channel_cost
         .mul(non_completing_fraction)
         .expect("multiplication overflow")
@@ -401,7 +433,8 @@ impl LegitimacyTriangulation {
     pub fn converging_negative_signal(&self) -> bool {
         self.trust_index.as_fraction() < self.trust_index_prior.as_fraction()
             && self.upheld_complaints_per_1000 > self.upheld_complaints_per_1000_prior
-            && self.ombudsman_uphold_rate.as_fraction() > self.ombudsman_uphold_rate_prior.as_fraction()
+            && self.ombudsman_uphold_rate.as_fraction()
+                > self.ombudsman_uphold_rate_prior.as_fraction()
     }
 }
 

@@ -53,7 +53,11 @@ impl FiveCaseModel {
     /// ```
     #[must_use]
     pub const fn proceeds(self) -> bool {
-        self.strategic_case && self.economic_case && self.commercial_case && self.financial_case && self.management_case
+        self.strategic_case
+            && self.economic_case
+            && self.commercial_case
+            && self.financial_case
+            && self.management_case
     }
 }
 
@@ -111,8 +115,13 @@ pub fn annuity_factor(annual_rate: Decimal, years: u32) -> Decimal {
 /// assert!((npsv.amount() - dec!(268_852)).abs() < dec!(1_000));
 /// ```
 #[must_use]
-pub fn net_present_social_value(present_value_of_benefits: Money, present_value_of_costs: Money) -> Money {
-    present_value_of_benefits.sub(present_value_of_costs).expect(CURRENCY_INVARIANT)
+pub fn net_present_social_value(
+    present_value_of_benefits: Money,
+    present_value_of_costs: Money,
+) -> Money {
+    present_value_of_benefits
+        .sub(present_value_of_costs)
+        .expect(CURRENCY_INVARIANT)
 }
 
 /// The benefit-cost ratio: present value of benefits divided by present value of costs. Above 1.0
@@ -140,7 +149,10 @@ pub fn net_present_social_value(present_value_of_benefits: Money, present_value_
 /// assert!((bcr.value() - 1.072).abs() < 0.01);
 /// ```
 #[must_use]
-pub fn benefit_cost_ratio(present_value_of_benefits: Money, present_value_of_costs: Money) -> Ratio {
+pub fn benefit_cost_ratio(
+    present_value_of_benefits: Money,
+    present_value_of_costs: Money,
+) -> Ratio {
     money_ratio(present_value_of_benefits, present_value_of_costs)
 }
 
@@ -166,7 +178,9 @@ pub fn benefit_cost_ratio(present_value_of_benefits: Money, present_value_of_cos
 /// ```
 #[must_use]
 pub fn cost_effectiveness_ratio(total_cost: Money, outcome_units_achieved: u32) -> Money {
-    total_cost.div(outcome_units_achieved).expect("division by zero or overflow")
+    total_cost
+        .div(outcome_units_achieved)
+        .expect("division by zero or overflow")
 }
 
 /// The incremental cost-effectiveness ratio (ICER) between two options: the extra cost of option A
@@ -192,10 +206,17 @@ pub fn cost_effectiveness_ratio(total_cost: Money, outcome_units_achieved: u32) 
 /// assert!((icer.amount() - dec!(8333.33)).abs() < dec!(1));
 /// ```
 #[must_use]
-pub fn incremental_cost_effectiveness_ratio(cost_a: Money, outcome_a: u32, cost_b: Money, outcome_b: u32) -> Money {
+pub fn incremental_cost_effectiveness_ratio(
+    cost_a: Money,
+    outcome_a: u32,
+    cost_b: Money,
+    outcome_b: u32,
+) -> Money {
     let cost_diff = cost_a.sub(cost_b).expect(CURRENCY_INVARIANT);
     let outcome_diff = i64::from(outcome_a) - i64::from(outcome_b);
-    cost_diff.div(outcome_diff).expect("division by zero or overflow")
+    cost_diff
+        .div(outcome_diff)
+        .expect("division by zero or overflow")
 }
 
 /// A multi-criteria decision analysis weighted score: `Σ (score_j × weight_j)` across criteria.
@@ -221,8 +242,16 @@ pub fn incremental_cost_effectiveness_ratio(cost_a: Money, outcome_a: u32, cost_
 /// ```
 #[must_use]
 pub fn weighted_score(scores: &[f64], weights: &[f64]) -> f64 {
-    debug_assert_eq!(scores.len(), weights.len(), "scores and weights must have the same length");
-    scores.iter().zip(weights).map(|(score, weight)| score * weight).sum()
+    debug_assert_eq!(
+        scores.len(),
+        weights.len(),
+        "scores and weights must have the same length"
+    );
+    scores
+        .iter()
+        .zip(weights)
+        .map(|(score, weight)| score * weight)
+        .sum()
 }
 
 /// The total WELLBYs (wellbeing-adjusted life years) a policy generates: the change in
@@ -268,8 +297,11 @@ pub fn wellbys(people_affected: u32, life_satisfaction_change: f64, duration_yea
 /// ```
 #[must_use]
 pub fn monetize_wellbys(total_wellbys: f64, value_per_wellby: Money) -> Money {
-    let wellbys_decimal = Decimal::from_f64_retain(total_wellbys).expect("finite WELLBY total converts to Decimal");
-    value_per_wellby.mul(wellbys_decimal).expect("multiplication overflow")
+    let wellbys_decimal =
+        Decimal::from_f64_retain(total_wellbys).expect("finite WELLBY total converts to Decimal");
+    value_per_wellby
+        .mul(wellbys_decimal)
+        .expect("multiplication overflow")
 }
 
 /// The aggregate stated-preference value: mean willingness-to-pay per household times the number
@@ -293,8 +325,13 @@ pub fn monetize_wellbys(total_wellbys: f64, value_per_wellby: Money) -> Money {
 /// assert_eq!(*aggregate.amount(), dec!(9_520_000));
 /// ```
 #[must_use]
-pub fn aggregate_stated_preference_value(mean_willingness_to_pay: Money, affected_population: u32) -> Money {
-    mean_willingness_to_pay.mul(affected_population).expect("multiplication overflow")
+pub fn aggregate_stated_preference_value(
+    mean_willingness_to_pay: Money,
+    affected_population: u32,
+) -> Money {
+    mean_willingness_to_pay
+        .mul(affected_population)
+        .expect("multiplication overflow")
 }
 
 /// The hedonic implicit price of a one-unit change in a non-market attribute (e.g. one decibel of
@@ -349,7 +386,11 @@ pub fn hedonic_implicit_price(market_price: Money, fractional_price_change_per_u
 /// assert_eq!(*value.amount(), dec!(920_000));
 /// ```
 #[must_use]
-pub fn travel_cost_annual_value(visits_per_year: u32, cost_per_visit: Money, consumer_surplus_per_visit: Money) -> Money {
+pub fn travel_cost_annual_value(
+    visits_per_year: u32,
+    cost_per_visit: Money,
+    consumer_surplus_per_visit: Money,
+) -> Money {
     cost_per_visit
         .add(consumer_surplus_per_visit)
         .expect(CURRENCY_INVARIANT)
@@ -380,7 +421,9 @@ pub fn travel_cost_annual_value(visits_per_year: u32, cost_per_visit: Money, con
 /// ```
 #[must_use]
 pub fn shadow_carbon_benefit(tonnes_co2e: u32, price_per_tonne: Money) -> Money {
-    price_per_tonne.mul(tonnes_co2e).expect("multiplication overflow")
+    price_per_tonne
+        .mul(tonnes_co2e)
+        .expect("multiplication overflow")
 }
 
 /// The shadow wage rate: the market wage scaled down by a fraction reflecting that labour drawn
@@ -404,7 +447,9 @@ pub fn shadow_carbon_benefit(tonnes_co2e: u32, price_per_tonne: Money) -> Money 
 /// ```
 #[must_use]
 pub fn shadow_wage_rate(market_wage: Money, shadow_fraction: Decimal) -> Money {
-    market_wage.mul(shadow_fraction).expect("multiplication overflow")
+    market_wage
+        .mul(shadow_fraction)
+        .expect("multiplication overflow")
 }
 
 /// The net social benefit per hour of employing previously idle labour: the market wage minus the
@@ -478,7 +523,9 @@ pub fn qaly(years_in_health_state: f64, utility_weight: f64) -> f64 {
 /// ```
 #[must_use]
 pub fn clears_qaly_threshold(cost_per_qaly: Money, threshold_per_qaly: Money) -> bool {
-    cost_per_qaly.lte(&threshold_per_qaly).expect(CURRENCY_INVARIANT)
+    cost_per_qaly
+        .lte(&threshold_per_qaly)
+        .expect(CURRENCY_INVARIANT)
 }
 
 /// Years of Life Lost (YLL): the number of deaths times the standard life expectancy remaining at
@@ -517,7 +564,11 @@ pub fn years_of_life_lost(deaths: u32, standard_life_expectancy_at_death: f64) -
 /// assert!((yld - 400.0).abs() < 1e-9);
 /// ```
 #[must_use]
-pub fn years_lived_with_disability(incident_cases: u32, average_duration_years: f64, disability_weight: f64) -> f64 {
+pub fn years_lived_with_disability(
+    incident_cases: u32,
+    average_duration_years: f64,
+    disability_weight: f64,
+) -> f64 {
     f64::from(incident_cases) * average_duration_years * disability_weight
 }
 
@@ -536,7 +587,10 @@ pub fn years_lived_with_disability(incident_cases: u32, average_duration_years: 
 /// assert!((daly - 1_600.0).abs() < 1e-9);
 /// ```
 #[must_use]
-pub fn disability_adjusted_life_years(years_of_life_lost: f64, years_lived_with_disability: f64) -> f64 {
+pub fn disability_adjusted_life_years(
+    years_of_life_lost: f64,
+    years_lived_with_disability: f64,
+) -> f64 {
     years_of_life_lost + years_lived_with_disability
 }
 
@@ -567,8 +621,16 @@ pub fn disability_adjusted_life_years(years_of_life_lost: f64, years_lived_with_
 /// assert_eq!(*real.amount(), dec!(1_000_000));
 /// ```
 #[must_use]
-pub fn real_value(nominal_value: Money, base_period_price_index: Decimal, current_period_price_index: Decimal) -> Money {
-    nominal_value.mul(base_period_price_index).expect("multiplication overflow").div(current_period_price_index).expect("division by zero or overflow")
+pub fn real_value(
+    nominal_value: Money,
+    base_period_price_index: Decimal,
+    current_period_price_index: Decimal,
+) -> Money {
+    nominal_value
+        .mul(base_period_price_index)
+        .expect("multiplication overflow")
+        .div(current_period_price_index)
+        .expect("division by zero or overflow")
 }
 
 /// The Value of a Statistical Life (VSL), via the revealed-preference wage-risk (hedonic wage)
@@ -602,9 +664,15 @@ pub fn real_value(nominal_value: Money, base_period_price_index: Decimal, curren
 /// assert_eq!(vsl.amount().round_dp(0), dec!(2_100_000));
 /// ```
 #[must_use]
-pub fn value_of_statistical_life(annual_wage_premium: Money, annual_fatality_risk_change: f64) -> Money {
-    let risk_change = Decimal::from_f64_retain(annual_fatality_risk_change).expect("finite risk change converts to Decimal");
-    annual_wage_premium.div(risk_change).expect("division by zero or overflow")
+pub fn value_of_statistical_life(
+    annual_wage_premium: Money,
+    annual_fatality_risk_change: f64,
+) -> Money {
+    let risk_change = Decimal::from_f64_retain(annual_fatality_risk_change)
+        .expect("finite risk change converts to Decimal");
+    annual_wage_premium
+        .div(risk_change)
+        .expect("division by zero or overflow")
 }
 
 /// The Internal Rate of Return (IRR): the discount rate at which a cash-flow series' net present
@@ -628,12 +696,18 @@ pub fn value_of_statistical_life(annual_wage_premium: Money, annual_fatality_ris
 /// assert!((irr - 0.2338).abs() < 0.001);
 /// ```
 #[must_use]
-pub fn internal_rate_of_return(cash_flows: &[f64], tolerance: f64, max_iterations: u32) -> Option<f64> {
+pub fn internal_rate_of_return(
+    cash_flows: &[f64],
+    tolerance: f64,
+    max_iterations: u32,
+) -> Option<f64> {
     let net_present_value = |rate: f64| -> f64 {
         cash_flows
             .iter()
             .enumerate()
-            .map(|(period, cash_flow)| cash_flow / (1.0 + rate).powi(i32::try_from(period).unwrap_or(i32::MAX)))
+            .map(|(period, cash_flow)| {
+                cash_flow / (1.0 + rate).powi(i32::try_from(period).unwrap_or(i32::MAX))
+            })
             .sum()
     };
 

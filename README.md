@@ -117,6 +117,8 @@ completing connections these formulas reference but don't implement: `qaly`/`cle
 
 ## Testing this crate
 
+Minimum supported Rust version (MSRV): 1.98.
+
 ```sh
 cargo test                          # unit + integration + 112 doctests
 cargo clippy --all-targets -- -D warnings

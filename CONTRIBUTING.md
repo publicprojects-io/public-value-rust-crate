@@ -10,13 +10,16 @@ Thanks for helping improve this project.
 
 ## Development
 
+Read `AGENTS.md` and `spec/` first; the spec is the source of truth. Layout: library modules in
+`src/`, integration tests in `tests/`, tutorials in `docs/tutorials/`.
+
 ```sh
-cargo fmt --all --check
-cargo clippy --workspace --all-targets --all-features -- -D warnings
-cargo test --workspace --all-features
+make ci                                    # runs bin/ci: fmt, clippy, tests + doctests, rustdoc
+make test-minimum-supported-rust-version   # check and test on the MSRV (1.98) and the next minor
 ```
 
-Run these before opening a pull request.
+Run `make ci` before opening a pull request. Every public item needs rustdoc with a doctest, and
+clippy pedantic is denied crate-wide.
 
 ## Code of conduct
 

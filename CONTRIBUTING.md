@@ -27,4 +27,4 @@ Participation is governed by our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## License
 
-By contributing, you agree that your contribution is offered under the terms in the terms in [LICENSE.md](LICENSE.md).
+By contributing, you agree that your contribution is offered under the terms in [LICENSE.md](LICENSE.md).

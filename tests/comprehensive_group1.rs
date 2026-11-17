@@ -2,9 +2,9 @@
 //! source topics in `~/git/public-value-metrics` (see `spec/topics.md`).
 
 use public_value::foundations::{
-    attribution_shares_valid, difference_in_differences, discount_factor, distributional_weight,
-    net_additional_impact, net_additional_outcomes, net_public_value, present_value, weighted_benefit,
-    StrategicTriangle, ValueForMoneyOption,
+    StrategicTriangle, ValueForMoneyOption, attribution_shares_valid, difference_in_differences,
+    discount_factor, distributional_weight, net_additional_impact, net_additional_outcomes,
+    net_public_value, present_value, weighted_benefit,
 };
 use public_value::units::Percentage;
 use rust_decimal::prelude::ToPrimitive;
@@ -45,18 +45,37 @@ fn value_for_money_contact_centre() {
         staff_cost_per_hour: Money::from_decimal(dec!(28), iso::USD),
     };
 
-    assert_eq!(option_a.annual_efficiency_cost(40_000).amount().round_dp(0), dec!(410_667));
-    assert_eq!(option_b.annual_efficiency_cost(40_000).amount().round_dp(0), dec!(168_000));
+    assert_eq!(
+        option_a.annual_efficiency_cost(40_000).amount().round_dp(0),
+        dec!(410_667)
+    );
+    assert_eq!(
+        option_b.annual_efficiency_cost(40_000).amount().round_dp(0),
+        dec!(168_000)
+    );
 
-    assert!(option_a.total_cost(40_000, 1).lt(&option_b.total_cost(40_000, 1)).unwrap());
-    assert!(option_a.total_cost(40_000, 2).gt(&option_b.total_cost(40_000, 2)).unwrap());
+    assert!(
+        option_a
+            .total_cost(40_000, 1)
+            .lt(&option_b.total_cost(40_000, 1))
+            .unwrap()
+    );
+    assert!(
+        option_a
+            .total_cost(40_000, 2)
+            .gt(&option_b.total_cost(40_000, 2))
+            .unwrap()
+    );
 }
 
 /// `opportunity-cost-in-public-spending`: the digital-transformation fund worked example. The net
 /// case for option A over the realistic alternative B is £0.8m, not A's full £7.2m headline.
 #[test]
 fn opportunity_cost_digital_transformation_fund() {
-    let net = net_public_value(Money::from_decimal(dec!(7_200_000), iso::USD), Money::from_decimal(dec!(6_400_000), iso::USD));
+    let net = net_public_value(
+        Money::from_decimal(dec!(7_200_000), iso::USD),
+        Money::from_decimal(dec!(6_400_000), iso::USD),
+    );
     assert_eq!(*net.amount(), dec!(800_000));
 }
 
@@ -64,11 +83,17 @@ fn opportunity_cost_digital_transformation_fund() {
 /// schedule (3.5% for 30 years, 3.0% for the remaining 10) which raises the present value.
 #[test]
 fn social_discount_rate_flood_defence() {
-    let flat_pv = present_value(Money::from_decimal(dec!(10_000_000), iso::USD), dec!(0.035), 40);
+    let flat_pv = present_value(
+        Money::from_decimal(dec!(10_000_000), iso::USD),
+        dec!(0.035),
+        40,
+    );
     assert!((flat_pv.amount().to_f64().unwrap() - 2_525_725.0).abs() < 1_000.0);
 
     let declining_factor = discount_factor(dec!(0.035), 30) * discount_factor(dec!(0.03), 10);
-    let declining_pv = Money::from_decimal(dec!(10_000_000), iso::USD).div(declining_factor).unwrap();
+    let declining_pv = Money::from_decimal(dec!(10_000_000), iso::USD)
+        .div(declining_factor)
+        .unwrap();
     assert!((declining_pv.amount().to_f64().unwrap() - 2_651_046.0).abs() < 5_000.0);
     assert!(declining_pv.gt(&flat_pv).unwrap());
 }
@@ -77,8 +102,16 @@ fn social_discount_rate_flood_defence() {
 /// are tied at £2m; weighted for distributional impact, B's benefit is more than three times A's.
 #[test]
 fn distributional_weighting_two_programmes() {
-    let weight_a = distributional_weight(Money::from_decimal(dec!(45_000), iso::USD), Money::from_decimal(dec!(35_000), iso::USD), 1.3);
-    let weight_b = distributional_weight(Money::from_decimal(dec!(18_000), iso::USD), Money::from_decimal(dec!(35_000), iso::USD), 1.3);
+    let weight_a = distributional_weight(
+        Money::from_decimal(dec!(45_000), iso::USD),
+        Money::from_decimal(dec!(35_000), iso::USD),
+        1.3,
+    );
+    let weight_b = distributional_weight(
+        Money::from_decimal(dec!(18_000), iso::USD),
+        Money::from_decimal(dec!(35_000), iso::USD),
+        1.3,
+    );
 
     let weighted_a = weighted_benefit(Money::from_decimal(dec!(2_000_000), iso::USD), weight_a);
     let weighted_b = weighted_benefit(Money::from_decimal(dec!(2_000_000), iso::USD), weight_b);

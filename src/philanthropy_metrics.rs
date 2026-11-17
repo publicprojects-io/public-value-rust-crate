@@ -30,8 +30,13 @@ use crate::units::{Money, Percentage, money_ratio};
 /// assert_eq!(cost.amount().round_dp(2), dec!(714.29));
 /// ```
 #[must_use]
-pub fn cost_per_outcome(total_programme_cost: Money, beneficiaries_achieving_outcome: u32) -> Money {
-    total_programme_cost.div(beneficiaries_achieving_outcome).expect("division by zero or overflow")
+pub fn cost_per_outcome(
+    total_programme_cost: Money,
+    beneficiaries_achieving_outcome: u32,
+) -> Money {
+    total_programme_cost
+        .div(beneficiaries_achieving_outcome)
+        .expect("division by zero or overflow")
 }
 
 /// Cost per beneficiary: total programme cost divided by the number of unique people served,
@@ -56,7 +61,9 @@ pub fn cost_per_outcome(total_programme_cost: Money, beneficiaries_achieving_out
 /// ```
 #[must_use]
 pub fn cost_per_beneficiary(total_programme_cost: Money, unique_people_served: u32) -> Money {
-    total_programme_cost.div(unique_people_served).expect("division by zero or overflow")
+    total_programme_cost
+        .div(unique_people_served)
+        .expect("division by zero or overflow")
 }
 
 /// Jed Emerson's blended value framework: every unit of capital deployed produces an economic, a
@@ -81,7 +88,11 @@ pub struct BlendedValue {
 impl BlendedValue {
     /// Creates a new blended value record for one investment or grant.
     #[must_use]
-    pub const fn new(economic_annual: Money, social_line: String, environmental_line: String) -> Self {
+    pub const fn new(
+        economic_annual: Money,
+        social_line: String,
+        environmental_line: String,
+    ) -> Self {
         Self {
             economic_annual,
             social_line,
@@ -112,8 +123,13 @@ impl BlendedValue {
 /// assert_eq!(*cost.amount(), dec!(4_500));
 /// ```
 #[must_use]
-pub fn effective_altruism_cost_effectiveness(intervention_cost: Money, units_of_good: Decimal) -> Money {
-    intervention_cost.div(units_of_good).expect("division by zero or overflow")
+pub fn effective_altruism_cost_effectiveness(
+    intervention_cost: Money,
+    units_of_good: Decimal,
+) -> Money {
+    intervention_cost
+        .div(units_of_good)
+        .expect("division by zero or overflow")
 }
 
 /// Units of good produced by a budget at a given cost per unit — the inverse of
@@ -164,7 +180,10 @@ pub fn units_produced(budget: Money, cost_per_unit: Money) -> f64 {
 /// assert!((ratio.as_percent() - 22.0).abs() < 0.001);
 /// ```
 #[must_use]
-pub fn charity_overhead_ratio(administrative_and_fundraising_cost: Money, total_expenditure: Money) -> Percentage {
+pub fn charity_overhead_ratio(
+    administrative_and_fundraising_cost: Money,
+    total_expenditure: Money,
+) -> Percentage {
     let ratio = money_ratio(administrative_and_fundraising_cost, total_expenditure);
     Percentage::from_fraction(ratio.value())
 }
@@ -218,7 +237,11 @@ pub fn programme_ratio(overhead_ratio: Percentage) -> Percentage {
 /// assert!(roi > roi_c);
 /// ```
 #[must_use]
-pub fn donor_return_on_investment(outcome_with_gift: f64, counterfactual_outcome: f64, gift: Money) -> f64 {
+pub fn donor_return_on_investment(
+    outcome_with_gift: f64,
+    counterfactual_outcome: f64,
+    gift: Money,
+) -> f64 {
     let additional_outcome = outcome_with_gift - counterfactual_outcome;
     // The numerator is an outcome count, not a monetary amount, so this divides by the gift's raw
     // decimal value converted to `f64` rather than via `units::money_ratio` (which divides two

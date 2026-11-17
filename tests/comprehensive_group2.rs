@@ -2,10 +2,10 @@
 //! the source topics in `~/git/public-value-metrics` (see `spec/topics.md`).
 
 use public_value::economic_appraisal::{
-    aggregate_stated_preference_value, annuity_factor, benefit_cost_ratio, cost_effectiveness_ratio,
-    hedonic_implicit_price, incremental_cost_effectiveness_ratio, monetize_wellbys,
-    net_present_social_value, net_social_benefit_per_hour, shadow_carbon_benefit, shadow_wage_rate,
-    travel_cost_annual_value, weighted_score, wellbys, FiveCaseModel,
+    FiveCaseModel, aggregate_stated_preference_value, annuity_factor, benefit_cost_ratio,
+    cost_effectiveness_ratio, hedonic_implicit_price, incremental_cost_effectiveness_ratio,
+    monetize_wellbys, net_present_social_value, net_social_benefit_per_hour, shadow_carbon_benefit,
+    shadow_wage_rate, travel_cost_annual_value, weighted_score, wellbys,
 };
 use public_value::units::money_ratio;
 use rust_decimal_macros::dec;
@@ -38,9 +38,15 @@ fn five_case_model_single_tender_supplier() {
 #[test]
 fn social_cost_benefit_analysis_cycling_network() {
     let factor = annuity_factor(dec!(0.035), 20);
-    let maintenance_pv = Money::from_decimal(dec!(50_000), iso::USD).mul(factor).unwrap();
-    let cost_pv = Money::from_decimal(dec!(3_000_000), iso::USD).add(maintenance_pv).unwrap();
-    let benefit_pv = Money::from_decimal(dec!(280_000), iso::USD).mul(factor).unwrap();
+    let maintenance_pv = Money::from_decimal(dec!(50_000), iso::USD)
+        .mul(factor)
+        .unwrap();
+    let cost_pv = Money::from_decimal(dec!(3_000_000), iso::USD)
+        .add(maintenance_pv)
+        .unwrap();
+    let benefit_pv = Money::from_decimal(dec!(280_000), iso::USD)
+        .mul(factor)
+        .unwrap();
 
     let npsv = net_present_social_value(benefit_pv, cost_pv);
     let bcr = benefit_cost_ratio(benefit_pv, cost_pv);
@@ -62,14 +68,26 @@ fn cost_effectiveness_rough_sleeping_options() {
     assert_eq!(*hostel.amount(), dec!(12_000));
     assert_eq!(*outreach.amount(), dec!(17_500));
 
-    let icer_hostel_vs_outreach =
-        incremental_cost_effectiveness_ratio(Money::from_decimal(dec!(600_000), iso::USD), 50, Money::from_decimal(dec!(350_000), iso::USD), 20);
-    let icer_housing_first_vs_hostel =
-        incremental_cost_effectiveness_ratio(Money::from_decimal(dec!(900_000), iso::USD), 60, Money::from_decimal(dec!(600_000), iso::USD), 50);
+    let icer_hostel_vs_outreach = incremental_cost_effectiveness_ratio(
+        Money::from_decimal(dec!(600_000), iso::USD),
+        50,
+        Money::from_decimal(dec!(350_000), iso::USD),
+        20,
+    );
+    let icer_housing_first_vs_hostel = incremental_cost_effectiveness_ratio(
+        Money::from_decimal(dec!(900_000), iso::USD),
+        60,
+        Money::from_decimal(dec!(600_000), iso::USD),
+        50,
+    );
 
     assert!((icer_hostel_vs_outreach.amount() - dec!(8333.33)).abs() < dec!(1));
     assert_eq!(*icer_housing_first_vs_hostel.amount(), dec!(30_000));
-    assert!(icer_hostel_vs_outreach.lt(&icer_housing_first_vs_hostel).unwrap());
+    assert!(
+        icer_hostel_vs_outreach
+            .lt(&icer_housing_first_vs_hostel)
+            .unwrap()
+    );
 }
 
 /// `multi-criteria-decision-analysis`: the recycling-centre site-selection worked example. Site C
@@ -105,7 +123,8 @@ fn wellbeing_valuation_befriending_scheme() {
 /// aggregating to £9.52m/year and ≈£135m over 20 years at 3.5%.
 #[test]
 fn stated_preference_water_quality() {
-    let aggregate = aggregate_stated_preference_value(Money::from_decimal(dec!(28), iso::USD), 340_000);
+    let aggregate =
+        aggregate_stated_preference_value(Money::from_decimal(dec!(28), iso::USD), 340_000);
     assert_eq!(*aggregate.amount(), dec!(9_520_000));
 
     let factor = annuity_factor(dec!(0.035), 20);
@@ -117,13 +136,22 @@ fn stated_preference_water_quality() {
 /// cost) and the nature-reserve travel-cost worked example (£920,000/year).
 #[test]
 fn revealed_preference_examples() {
-    let implicit_price = hedonic_implicit_price(Money::from_decimal(dec!(280_000), iso::USD), 0.005);
+    let implicit_price =
+        hedonic_implicit_price(Money::from_decimal(dec!(280_000), iso::USD), 0.005);
     assert_eq!(implicit_price.amount().round_dp(2), dec!(1_400));
 
-    let aggregate_noise_cost = implicit_price.mul(dec!(3)).unwrap().mul(18_000_u32).unwrap();
+    let aggregate_noise_cost = implicit_price
+        .mul(dec!(3))
+        .unwrap()
+        .mul(18_000_u32)
+        .unwrap();
     assert_eq!(aggregate_noise_cost.amount().round_dp(2), dec!(75_600_000));
 
-    let value = travel_cost_annual_value(40_000, Money::from_decimal(dec!(14), iso::USD), Money::from_decimal(dec!(9), iso::USD));
+    let value = travel_cost_annual_value(
+        40_000,
+        Money::from_decimal(dec!(14), iso::USD),
+        Money::from_decimal(dec!(9), iso::USD),
+    );
     assert_eq!(*value.amount(), dec!(920_000));
 }
 

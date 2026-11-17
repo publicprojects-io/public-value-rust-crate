@@ -31,9 +31,11 @@ use crate::units::{Money, Percentage, Ratio, money_ratio};
 #[must_use]
 pub fn value_net_of_rate(value: Money, rate: Percentage) -> Money {
     let retained_fraction = 1.0 - rate.as_fraction();
-    let decimal_fraction =
-        Decimal::from_f64_retain(retained_fraction).expect("finite retained fraction converts to Decimal");
-    value.mul(decimal_fraction).expect("multiplication overflow")
+    let decimal_fraction = Decimal::from_f64_retain(retained_fraction)
+        .expect("finite retained fraction converts to Decimal");
+    value
+        .mul(decimal_fraction)
+        .expect("multiplication overflow")
 }
 
 /// The SROI ratio: present value of impact divided by the value of inputs.
@@ -242,7 +244,11 @@ pub fn attributable_outcome_count(population: u32, net_uplift: Percentage) -> f6
 /// assert!((score - 4.44).abs() < 0.01);
 /// ```
 #[must_use]
-pub fn proportional_social_value_score(bid_value: Money, strongest_bid_value: Money, max_points: f64) -> f64 {
+pub fn proportional_social_value_score(
+    bid_value: Money,
+    strongest_bid_value: Money,
+    max_points: f64,
+) -> f64 {
     max_points * money_ratio(bid_value, strongest_bid_value).value()
 }
 
@@ -268,7 +274,9 @@ pub fn proportional_social_value_score(bid_value: Money, strongest_bid_value: Mo
 /// ```
 #[must_use]
 pub fn applied_unit_cost_value(outcomes_achieved: u32, unit_proxy_value: Money) -> Money {
-    unit_proxy_value.mul(outcomes_achieved).expect("multiplication overflow")
+    unit_proxy_value
+        .mul(outcomes_achieved)
+        .expect("multiplication overflow")
 }
 
 /// A difference-in-differences impact estimate, re-exported here under the name
@@ -294,7 +302,10 @@ pub use crate::foundations::difference_in_differences as difference_in_differenc
 /// assert!((impact.as_percent() - 13.0).abs() < 0.01);
 /// ```
 #[must_use]
-pub fn propensity_score_matching_impact(treated_rate: Percentage, matched_comparison_rate: Percentage) -> Percentage {
+pub fn propensity_score_matching_impact(
+    treated_rate: Percentage,
+    matched_comparison_rate: Percentage,
+) -> Percentage {
     Percentage::from_fraction(treated_rate.as_fraction() - matched_comparison_rate.as_fraction())
 }
 

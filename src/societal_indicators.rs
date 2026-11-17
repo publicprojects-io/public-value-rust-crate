@@ -114,11 +114,17 @@ pub fn human_development_index(
     let mean_years_index = mean_years_schooling / 15.0;
     let expected_years_index = expected_years_schooling / 18.0;
     let education_index = f64::midpoint(mean_years_index, expected_years_index);
-    let income_index = (gni_per_capita.ln() - 100.0_f64.ln()) / (75_000.0_f64.ln() - 100.0_f64.ln());
+    let income_index =
+        (gni_per_capita.ln() - 100.0_f64.ln()) / (75_000.0_f64.ln() - 100.0_f64.ln());
     // Geometric, not arithmetic, mean: UNDP's 2010 methodology change so a high score on one
     // dimension cannot buy back a shortfall in another, unlike an average would allow.
     let hdi = (life_expectancy_index * education_index * income_index).powf(1.0 / 3.0);
-    HumanDevelopmentIndex { life_expectancy_index, education_index, income_index, hdi }
+    HumanDevelopmentIndex {
+        life_expectancy_index,
+        education_index,
+        income_index,
+        hdi,
+    }
 }
 
 /// The Multidimensional Poverty Index headcount ratio (H): the share of the population classed as
@@ -237,7 +243,10 @@ pub fn imd_decile(rank: u32, total_areas: u32) -> u32 {
 /// assert!((gap.as_percent() - 6.0).abs() < 0.01);
 /// ```
 #[must_use]
-pub fn social_capital_pillar_gap(local_reading: Percentage, national_average: Percentage) -> Percentage {
+pub fn social_capital_pillar_gap(
+    local_reading: Percentage,
+    national_average: Percentage,
+) -> Percentage {
     Percentage::from_fraction(national_average.as_fraction() - local_reading.as_fraction())
 }
 
@@ -268,8 +277,14 @@ pub fn social_capital_pillar_gap(local_reading: Percentage, national_average: Pe
 /// assert!((asset_value.amount() - dec!(5_629_348)).abs() < dec!(1_000));
 /// ```
 #[must_use]
-pub fn ecosystem_asset_value(annual_service_flow_value: Money, annual_rate: Decimal, years: u32) -> Money {
-    annual_service_flow_value.mul(annuity_factor(annual_rate, years)).expect("multiplication overflow")
+pub fn ecosystem_asset_value(
+    annual_service_flow_value: Money,
+    annual_rate: Decimal,
+    years: u32,
+) -> Money {
+    annual_service_flow_value
+        .mul(annuity_factor(annual_rate, years))
+        .expect("multiplication overflow")
 }
 
 /// The present value of a future sum discounted across several successive rate bands (a
@@ -296,12 +311,17 @@ pub fn ecosystem_asset_value(annual_service_flow_value: Money, annual_rate: Deci
 /// assert!((pv.amount() - dec!(0.0508)).abs() < dec!(0.001));
 /// ```
 #[must_use]
-pub fn present_value_across_schedule(future_value: Money, rate_year_bands: &[(Decimal, u32)]) -> Money {
+pub fn present_value_across_schedule(
+    future_value: Money,
+    rate_year_bands: &[(Decimal, u32)],
+) -> Money {
     let mut combined_factor = Decimal::ONE;
     for &(rate, years) in rate_year_bands {
         combined_factor *= discount_factor(rate, years);
     }
-    future_value.div(combined_factor).expect("division by zero or overflow")
+    future_value
+        .div(combined_factor)
+        .expect("division by zero or overflow")
 }
 
 /// The Gini coefficient of an income (or other) distribution: twice the area between the Lorenz
@@ -329,21 +349,31 @@ pub fn present_value_across_schedule(future_value: Money, rate_year_bands: &[(De
 /// assert!((gini - 0.392).abs() < 0.001);
 /// ```
 #[must_use]
-pub fn gini_coefficient(cumulative_population_shares: &[f64], cumulative_income_shares: &[f64]) -> f64 {
+pub fn gini_coefficient(
+    cumulative_population_shares: &[f64],
+    cumulative_income_shares: &[f64],
+) -> f64 {
     assert_eq!(
         cumulative_population_shares.len(),
         cumulative_income_shares.len(),
         "population and income share slices must have the same length"
     );
-    assert!(!cumulative_population_shares.is_empty(), "share slices must not be empty");
+    assert!(
+        !cumulative_population_shares.is_empty(),
+        "share slices must not be empty"
+    );
 
     let mut area_under_lorenz_curve = 0.0;
     let mut previous_population_share = 0.0;
     let mut previous_income_share = 0.0;
-    for (&population_share, &income_share) in cumulative_population_shares.iter().zip(cumulative_income_shares) {
+    for (&population_share, &income_share) in cumulative_population_shares
+        .iter()
+        .zip(cumulative_income_shares)
+    {
         // Trapezoidal rule: the area of each slice between consecutive Lorenz-curve points.
-        area_under_lorenz_curve +=
-            (population_share - previous_population_share) * (income_share + previous_income_share) / 2.0;
+        area_under_lorenz_curve += (population_share - previous_population_share)
+            * (income_share + previous_income_share)
+            / 2.0;
         previous_population_share = population_share;
         previous_income_share = income_share;
     }
@@ -415,7 +445,11 @@ pub fn inequality_adjusted_dimension_index(dimension_index: f64, atkinson_measur
 /// assert!((loss.as_percent() - 11.89).abs() < 0.1);
 /// ```
 #[must_use]
-pub fn inequality_adjusted_hdi(adjusted_health_index: f64, adjusted_education_index: f64, adjusted_income_index: f64) -> f64 {
+pub fn inequality_adjusted_hdi(
+    adjusted_health_index: f64,
+    adjusted_education_index: f64,
+    adjusted_income_index: f64,
+) -> f64 {
     (adjusted_health_index * adjusted_education_index * adjusted_income_index).powf(1.0 / 3.0)
 }
 

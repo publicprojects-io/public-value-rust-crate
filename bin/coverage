@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Measure test coverage with cargo-tarpaulin (cargo install cargo-tarpaulin).
+# Usage: bin/coverage   # HTML report: target/coverage/tarpaulin-report.html
+set -euo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+cargo tarpaulin --config tarpaulin.toml

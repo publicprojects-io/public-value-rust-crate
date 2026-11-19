@@ -28,6 +28,8 @@ jobs:
           RUSTDOCFLAGS: -D warnings
       - run: echo '<meta http-equiv="refresh" content="0; url=public_value/index.html">' > target/doc/index.html
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: target/doc

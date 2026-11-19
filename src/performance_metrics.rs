@@ -1,6 +1,14 @@
 //! Governmental performance and delivery metrics: public sector KPIs, the public value scorecard,
 //! outcomes-based accountability, payment by results, public service productivity, citizen
 //! satisfaction, service standards, and trust/legitimacy metrics.
+//!
+//! # Examples
+//!
+//! ```
+//! use public_value::performance_metrics::kpi_percentage;
+//!
+//! assert_eq!(kpi_percentage(87, 100).as_percent(), 87.0);
+//! ```
 
 use rust_decimal::Decimal;
 

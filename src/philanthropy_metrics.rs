@@ -1,6 +1,17 @@
 //! Social sector and philanthropy metrics: cost per outcome, cost per beneficiary, blended value,
 //! effective-altruism-style cost-effectiveness, charity overhead ratio, donor return on investment,
 //! grant outcomes reporting, and volunteer time value.
+//!
+//! # Examples
+//!
+//! ```
+//! use public_value::philanthropy_metrics::cost_per_outcome;
+//! use public_value::units::{Money, iso};
+//! use rust_decimal_macros::dec;
+//!
+//! let cost = cost_per_outcome(Money::from_decimal(dec!(450_000), iso::USD), 630);
+//! assert_eq!(cost.amount().round_dp(2), dec!(714.29));
+//! ```
 
 use rust_decimal::Decimal;
 use rust_decimal::prelude::ToPrimitive;

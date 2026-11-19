@@ -16,7 +16,8 @@ endef
 ##
 .PHONY: test
 test:
-	bin/test
+	cargo test --all-targets --all-features
+	cargo test --doc --all-features
 
 ##
 # make test-minimum-supported-rust-version: test with the minimum supported Rust version
@@ -40,8 +41,16 @@ ci:
 	bin/ci
 
 ##
-# make coverage: : run bin/coverage to generate code coverage analysis with tarpaulin.
+# make coverage: run bin/coverage to enforce 100% function, line, and region coverage.
 ##
 .PHONY: coverage
 coverage:
 	bin/coverage
+
+##
+# make release VERSION=x.y.z: validate and publish an already-prepared release.
+##
+.PHONY: release
+release:
+	@test -n "$(VERSION)" || (echo "usage: make release VERSION=x.y.z" >&2; exit 2)
+	bin/release "$(VERSION)"

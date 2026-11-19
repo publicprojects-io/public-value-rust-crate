@@ -1,6 +1,6 @@
 {
   "name": "public-value",
-  "version": "0.1.0",
+  "version": "1.0.3",
   "description": "Public value models, structs, and calculations for software engineers building for governmental and social sector organizations.",
   "repository": "https://github.com/publicprojects-io/public-value-rust-crate/",
   "language": "Rust",
@@ -32,6 +32,8 @@
     { "path": "README.md", "description": "Module list, quick-start example, testing instructions." },
     { "path": "docs/tutorials/getting-started.md", "description": "A worked business case spanning three modules." },
     { "path": "docs/tutorials/porting-a-new-topic.md", "description": "The process for adding a new topic." },
+    { "path": "docs/cheat-sheet.md", "description": "Compact index of every public calculation and method." },
+    { "path": "FAQ.md", "description": "Answers to common design and contribution questions." },
     { "path": "spec/architecture.md", "description": "The four modelling shapes and crate-wide conventions." },
     { "path": "spec/topics.md", "description": "All 64 source topics mapped to their Rust module and primary symbol." }
   ],
@@ -94,7 +96,7 @@
         "value_net_of_rate", "sroi_ratio", "CausalLink", "TheoryOfChange", "assumption_hold_rate",
         "LogicModel", "net_outcome_uplift", "attributable_outcome_count",
         "proportional_social_value_score", "applied_unit_cost_value",
-        "difference_in_differences_impact", "propensity_score_matching_impact",
+        "propensity_score_matching_impact",
         "CombinedDiagnosis", "diagnose"
       ]
     },

@@ -1,6 +1,19 @@
 //! Wellbeing, equity and societal indicators: GDP alternatives, the Human Development Index, the
 //! Multidimensional Poverty Index, wellbeing-adjusted life years, the Index of Multiple
 //! Deprivation, social capital metrics, natural capital accounting, and intergenerational equity.
+//!
+//! # Examples
+//!
+//! ```
+//! use public_value::societal_indicators::multidimensional_poverty_index;
+//! use public_value::units::Percentage;
+//!
+//! let mpi = multidimensional_poverty_index(
+//!     Percentage::from_percent(40.0),
+//!     Percentage::from_percent(50.0),
+//! );
+//! assert!((mpi - 0.2).abs() < 1e-9);
+//! ```
 
 use rust_decimal::Decimal;
 

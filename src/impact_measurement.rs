@@ -1,6 +1,16 @@
 //! Social value and impact measurement: social return on investment, theory of change, logic
 //! models, the outcomes-vs-outputs distinction, the UK Social Value Act, unit cost databases, and
 //! impact evaluation methods.
+//!
+//! # Examples
+//!
+//! ```
+//! use public_value::impact_measurement::net_outcome_uplift;
+//! use public_value::units::Percentage;
+//!
+//! let uplift = net_outcome_uplift(Percentage::from_percent(46.0), Percentage::from_percent(33.0));
+//! assert!((uplift.as_percent() - 13.0).abs() < 1e-9);
+//! ```
 
 use rust_decimal::Decimal;
 

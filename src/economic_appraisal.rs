@@ -2,6 +2,14 @@
 //! cost-effectiveness analysis, multi-criteria decision analysis, and the valuation methods
 //! (wellbeing, stated preference, revealed preference, shadow pricing) that price what markets
 //! never priced.
+//!
+//! # Examples
+//!
+//! ```
+//! use public_value::economic_appraisal::qaly;
+//!
+//! assert!((qaly(5.0, 0.7) - 3.5).abs() < 1e-9);
+//! ```
 
 use rust_decimal::Decimal;
 

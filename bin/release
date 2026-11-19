@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Validate an already-prepared release. Set PUBLISH=1 to tag, push, and publish it.
+# Usage: bin/release 1.2.3
+set -euo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+version="${1:-}"
+if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "usage: bin/release x.y.z" >&2
+    exit 2
+fi
+
+manifest_version="$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -1)"
+if [[ "$manifest_version" != "$version" ]]; then
+    echo "error: Cargo.toml is $manifest_version, expected $version; prepare the version bump first" >&2
+    exit 1
+fi
+if ! grep -q "^## $version" CHANGELOG.md; then
+    echo "error: CHANGELOG.md has no ## $version release heading" >&2
+    exit 1
+fi
+if [[ -n "$(git status --porcelain)" ]]; then
+    echo "error: release requires a clean worktree" >&2
+    exit 1
+fi
+
+bin/ci
+cargo package --locked
+cargo publish --locked --dry-run
+
+if [[ "${PUBLISH:-0}" != "1" ]]; then
+    echo "release v$version validated; rerun with PUBLISH=1 to tag, push, and publish"
+    exit 0
+fi
+
+git tag -s "v$version" -m "Release $version"
+git push origin "v$version"
+cargo publish --locked

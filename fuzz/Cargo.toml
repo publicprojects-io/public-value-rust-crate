@@ -1,0 +1,23 @@
+[package]
+name = "public-value-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+public-value = { path = ".." }
+rust_decimal = "1.43"
+rusty-money = { version = "0.5", features = ["iso"] }
+
+[[bin]]
+name = "money_arithmetic"
+path = "fuzz_targets/money_arithmetic.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]

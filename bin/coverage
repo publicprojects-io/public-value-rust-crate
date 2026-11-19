@@ -1,6 +1,20 @@
 #!/usr/bin/env bash
-# Measure test coverage with cargo-tarpaulin (cargo install cargo-tarpaulin).
-# Usage: bin/coverage   # HTML report: target/coverage/tarpaulin-report.html
+# Measure test coverage with cargo-llvm-cov and enforce complete source coverage.
+# Usage: bin/coverage   # HTML report: target/coverage/html/index.html
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
-cargo tarpaulin --config tarpaulin.toml
+
+command -v cargo-llvm-cov >/dev/null 2>&1 || {
+    echo "error: cargo-llvm-cov is required (cargo install cargo-llvm-cov)" >&2
+    exit 1
+}
+
+cargo llvm-cov \
+    --all-features \
+    --workspace \
+    --ignore-filename-regex '/(\.cargo|kache)/registry/' \
+    --html \
+    --output-dir target/coverage \
+    --fail-under-functions 100 \
+    --fail-under-lines 100 \
+    --fail-under-regions 100

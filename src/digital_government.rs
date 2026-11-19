@@ -1,6 +1,20 @@
 //! Public value in digital government: the digital service standard, cost per transaction, channel
 //! shift savings, digital inclusion, government as a platform, open data value, public sector
 //! cybersecurity value, and AI in government value.
+//!
+//! # Examples
+//!
+//! ```
+//! use public_value::digital_government::annualized_loss_expectancy;
+//! use public_value::units::{Money, Percentage, iso};
+//! use rust_decimal_macros::dec;
+//!
+//! let loss = annualized_loss_expectancy(
+//!     Money::from_decimal(dec!(2_000_000), iso::USD),
+//!     Percentage::from_percent(5.0),
+//! );
+//! assert_eq!(loss.amount().round_dp(2), dec!(100_000));
+//! ```
 
 use rust_decimal::Decimal;
 

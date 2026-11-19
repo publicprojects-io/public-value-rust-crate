@@ -24,6 +24,8 @@ Every public function is `#[must_use]` and documented; `#![deny(missing_docs)]` 
   three modules.
 - [Porting a new topic tutorial](docs/tutorials/porting-a-new-topic.md): the process for adding a
   topic, for maintainers or contributors.
+- [Cheat sheet](docs/cheat-sheet.md): compact index of every public calculation and method.
+- [FAQ](FAQ.md): common design and contribution questions.
 - [Architecture spec](spec/architecture.md): the four modelling shapes, shared newtypes, naming and
   lint conventions — the single source of truth for how this crate is built.
 - [Topic mapping spec](spec/topics.md): all 64 source topics mapped to their Rust module and

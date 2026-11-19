@@ -13,8 +13,12 @@ env:
 
 jobs:
   check:
-    name: Format, lint, test, docs
-    runs-on: ubuntu-latest
+    name: Format, lint, test, docs (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
       # rust-toolchain.toml pins the toolchain and components; rustup installs them on first use.
@@ -22,6 +26,7 @@ jobs:
         run: rustup show active-toolchain || rustup toolchain install
       - uses: Swatinem/rust-cache@v2
       - run: bin/ci
+        shell: bash
 
   msrv:
     name: MSRV (${{ matrix.toolchain }})
@@ -37,3 +42,31 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo +${{ matrix.toolchain }} check --all-targets
       - run: cargo +${{ matrix.toolchain }} test
+
+  coverage:
+    name: Coverage (100%)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: rustup show active-toolchain || rustup toolchain install
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      - uses: Swatinem/rust-cache@v2
+      - run: bin/coverage
+      - run: cargo llvm-cov report --lcov --output-path target/lcov.info
+      - uses: codecov/codecov-action@v5
+        with:
+          files: target/lcov.info
+          fail_ci_if_error: true
+
+  nightly:
+    name: Nightly compatibility
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install nightly --profile minimal
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: nightly
+      - run: cargo +nightly check --all-targets --all-features

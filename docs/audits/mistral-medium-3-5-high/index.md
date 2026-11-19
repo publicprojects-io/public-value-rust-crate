@@ -1,5 +1,8 @@
 Here are **prioritized quality improvement tasks** for AI to execute on the `public-value` Rust crate. Organized by impact area with clear acceptance criteria. The project is currently clean (all tests pass, clippy is happy, docs build), version 1.0.2, 80 public items across 8 modules + units.
 
+> This recommendation set has been triaged in full. See [resolution.md](resolution.md) for the
+> item-by-item disposition and the repository evidence behind each completed or declined item.
+
 ---
 
 ---

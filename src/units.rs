@@ -24,6 +24,14 @@
 //! [`Ratio`] and [`Percentage`] stay `f64` because several formulas need transcendental functions
 //! (natural log, roots) that are naturally lossy anyway, and because a ratio or percentage is a
 //! reporting figure, not an amount that gets added to other amounts.
+//!
+//! # Examples
+//!
+//! ```
+//! use public_value::units::Percentage;
+//!
+//! assert_eq!(Percentage::from_percent(42.0).as_fraction(), 0.42);
+//! ```
 
 use std::fmt;
 

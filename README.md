@@ -1,6 +1,8 @@
 # public-value
 
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0%20OR%20BSD--3--Clause%20OR%20GPL--2.0--only%20OR%20GPL--3.0--only-blue)](#license)
+[![CI](https://github.com/publicprojects-io/public-value-rust-crate/actions/workflows/ci.yml/badge.svg)](https://github.com/publicprojects-io/public-value-rust-crate/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)](Makefile)
 
 Public value models, structs, and calculations for software engineers building for governmental and
 social sector organizations: value for money, cost-benefit and cost-effectiveness analysis, social
@@ -34,6 +36,25 @@ println!("Cost per outcome: {cost}"); // $714.29
 Every public function and type carries a doctest reproducing a real worked example from the source
 material — read the [generated rustdoc](https://docs.rs/public-value) or a module's source for the
 worked numbers behind any calculation.
+
+## Quick examples
+
+- **SROI:** `sroi_ratio($359,070, $250,000)` → `1.44:1`.
+- **Cost per outcome:** `cost_per_outcome($450,000, 630)` → `$714.29`.
+- **Net public value:** `net_public_value($900,000, $650,000)` → `$250,000`.
+- **Human development:** `human_development_index(72, 8, 13, 12_000)` → the source example's HDI.
+- **Cost of delay:** `cost_of_delay_per_week($520,000)` → `$10,000/week`.
+
+Run all six calculations in the bundled demo, or display its usage:
+
+```sh
+cargo run --quiet
+cargo run --quiet -- --help
+```
+
+For complete imports and a multi-step worked appraisal, follow the
+[getting-started tutorial](docs/tutorials/getting-started.md). The [cheat sheet](docs/cheat-sheet.md)
+is the shortest API index; the [FAQ](FAQ.md) explains design choices.
 
 ## Why a crate, not just a spreadsheet
 
@@ -123,6 +144,7 @@ Minimum supported Rust version (MSRV): 1.98.
 cargo test                          # unit + integration + 112 doctests
 cargo clippy --all-targets -- -D warnings
 cargo doc --no-deps --open
+make coverage                       # enforces 100% function, line, and region coverage
 ```
 
 `tests/comprehensive_group1.rs` through `comprehensive_group8.rs` mirror the module list above — one
@@ -136,6 +158,17 @@ The domain content (definitions, formulas, worked examples) is ported from
 infrastructure or its SvelteKit documentation site — it is a calculation library, not a book or a
 website. See [`spec/architecture.md`](spec/architecture.md) for what was and wasn't carried over and
 why.
+
+## Project information
+
+- [Changelog](CHANGELOG.md)
+- [Roadmap](ROADMAP.md)
+- [Development guide](DEVELOPMENT.md)
+- [Security policy](SECURITY.md)
+- [Glossary](GLOSSARY.md) and [references](REFERENCES.md)
+
+No external adopters have asked to be listed yet. If you use the crate in a public project, open a
+pull request adding a link here; private and internal use never needs to be disclosed.
 
 ## License
 

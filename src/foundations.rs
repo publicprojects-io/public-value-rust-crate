@@ -2,6 +2,15 @@
 //! Mark Moore's strategic triangle, value for money, opportunity cost, the social discount rate,
 //! distributional weighting, and the additionality/attribution/counterfactual trio that tests
 //! whether a claimed impact is real.
+//!
+//! # Examples
+//!
+//! ```
+//! use public_value::foundations::net_additional_outcomes;
+//! use public_value::units::Percentage;
+//!
+//! assert_eq!(net_additional_outcomes(1_000, Percentage::from_percent(30.0)), 700.0);
+//! ```
 
 use rust_decimal::Decimal;
 use rust_decimal::prelude::MathematicalOps;

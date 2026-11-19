@@ -1,6 +1,17 @@
 //! Software engineering and digital delivery connection: cost of delay, DORA metrics translated
 //! into public value terms, flow metrics, technical debt as public value erosion, total cost of
 //! ownership, build vs buy, benefits realization, and AI productivity in the public sector.
+//!
+//! # Examples
+//!
+//! ```
+//! use public_value::delivery_connection::cost_of_delay_per_week;
+//! use public_value::units::{Money, iso};
+//! use rust_decimal_macros::dec;
+//!
+//! let delay = cost_of_delay_per_week(Money::from_decimal(dec!(520_000), iso::USD));
+//! assert_eq!(*delay.amount(), dec!(10_000));
+//! ```
 
 use rust_decimal::Decimal;
 

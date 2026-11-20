@@ -1,6 +1,6 @@
 {
   "name": "public-value",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Public value models, structs, and calculations for software engineers building for governmental and social sector organizations.",
   "repository": "https://github.com/publicprojects-io/public-value-rust-crate/",
   "language": "Rust",

@@ -46,6 +46,8 @@ jobs:
   coverage:
     name: Coverage (100%)
     runs-on: ubuntu-latest
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - name: Install toolchain
@@ -55,8 +57,10 @@ jobs:
       - run: bin/coverage
       - run: cargo llvm-cov report --lcov --output-path target/lcov.info
       - uses: codecov/codecov-action@v5
+        if: env.CODECOV_TOKEN != ''
         with:
           files: target/lcov.info
+          token: ${{ env.CODECOV_TOKEN }}
           fail_ci_if_error: true
 
   nightly:

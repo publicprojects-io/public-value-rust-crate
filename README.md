@@ -144,7 +144,7 @@ Minimum supported Rust version (MSRV): 1.98.
 cargo test                          # unit + integration + 112 doctests
 cargo clippy --all-targets -- -D warnings
 cargo doc --no-deps --open
-make coverage                       # enforces 100% function, line, and region coverage
+make test-coverage                       # enforces 100% function, line, and region coverage
 ```
 
 `tests/comprehensive_group1.rs` through `comprehensive_group8.rs` mirror the module list above — one

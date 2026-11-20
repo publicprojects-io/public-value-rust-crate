@@ -54,7 +54,7 @@ jobs:
         run: rustup show active-toolchain || rustup toolchain install
       - uses: taiki-e/install-action@cargo-llvm-cov
       - uses: Swatinem/rust-cache@v2
-      - run: bin/coverage
+      - run: bin/test-coverage
       - run: cargo llvm-cov report --lcov --output-path target/lcov.info
       - uses: codecov/codecov-action@v5
         if: env.CODECOV_TOKEN != ''

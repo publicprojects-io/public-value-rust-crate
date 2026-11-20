@@ -10,8 +10,8 @@
 
 ```sh
 make ci
-make coverage
-make test-minimum-supported-rust-version
+make test-coverage
+make ci-minimum-supported-rust-version
 ```
 
 Run one integration test with `cargo test --test comprehensive_group4`, one named test with

@@ -25,4 +25,4 @@ operations, so `f64` is the practical reporting type. Tests use tolerances where
 ## How do I contribute?
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md), `AGENTS.md`, and both files in `spec/`. Run `make ci` and
-`make coverage` before opening a pull request.
+`make test-coverage` before opening a pull request.

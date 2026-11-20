@@ -42,7 +42,7 @@ library-wide lint suppression is present.
 
 ## Coverage and API use
 
-`bin/coverage` enforces 100% function, line, and region coverage across first-party source. Public
+`bin/test-coverage` enforces 100% function, line, and region coverage across first-party source. Public
 items are exercised by source worked examples, integration tests, doctests, property tests, the
 demo, and representative benchmarks. A public library cannot prove downstream use of every API;
 documentation and source mapping, rather than speculative removal, govern the stable surface.

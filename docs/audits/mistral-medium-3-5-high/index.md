@@ -45,7 +45,7 @@ Here are **prioritized quality improvement tasks** for AI to execute on the `pub
 | **TEST-003** | Create a `tests/roundtrip.rs` | Verify serialization/deserialization | Test that `Money`, `Ratio`, `Percentage` can round-trip through serialize/deserialize (if traits are added). |
 | **TEST-004** | Add mutation testing | Ensure test suite quality | Use `cargo-mutants` to run mutation testing. Add to CI as a nightly job. |
 | **TEST-005** | Add snapshot tests for doc examples | Prevent doc drift | Use `trycmd` to test that all doc examples compile and produce expected output. |
-| **TEST-006** | Add benchmarks for all public functions | `bin/benchmarks` exists but empty | Use `criterion` to benchmark each module's functions. Add `benches/` directory. |
+| **TEST-006** | Add benchmarks for all public functions | `bin/test-benchmarks` exists but empty | Use `criterion` to benchmark each module's functions. Add `benches/` directory. |
 | **TEST-007** | Verify doctests in CI | Currently only run manually | Add `cargo test --doc` to `bin/ci` script (currently missing from CI). |
 
 ### **2. Code Health & Linting**

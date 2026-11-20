@@ -15,7 +15,7 @@ Read `AGENTS.md` and `spec/` first; the spec is the source of truth. Layout: lib
 
 ```sh
 make ci                                    # runs bin/ci: fmt, clippy, tests + doctests, rustdoc
-make test-minimum-supported-rust-version   # check and test on the MSRV (1.98) and the next minor
+make ci-minimum-supported-rust-version   # check and test on the MSRV (1.98) and the next minor
 ```
 
 Run `make ci` before opening a pull request. Every public item needs rustdoc with a doctest, and
@@ -29,7 +29,7 @@ clippy pedantic is denied crate-wide.
 4. Implement the item in its category module with `#[must_use]`, source credit, and a real worked
    example doctest.
 5. Add the worked example to the matching `tests/comprehensive_groupN.rs` file.
-6. Run `make ci`, `make coverage`, and the MSRV check.
+6. Run `make ci`, `make test-coverage`, and the MSRV check.
 
 The full rationale and walkthrough are in
 [`docs/tutorials/porting-a-new-topic.md`](docs/tutorials/porting-a-new-topic.md).

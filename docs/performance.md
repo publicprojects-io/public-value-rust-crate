@@ -10,5 +10,5 @@ roots and logarithms are required. No function performs file, network, or databa
 compiler is left to make inlining decisions; manual caches would add synchronization and stale-data
 risk without removing meaningful work.
 
-Run `make benchmarks` for representative Criterion measurements on the current machine. Benchmark
+Run `make test-benchmarks` for representative Criterion measurements on the current machine. Benchmark
 results are not committed because absolute timings are hardware- and load-dependent.

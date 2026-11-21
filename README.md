@@ -1,6 +1,6 @@
 # public-value
 
-[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0%20OR%20BSD--3--Clause%20OR%20GPL--2.0--only%20OR%20GPL--3.0--only-blue)](#license)
+[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0%20OR%20BSD--3--Clause%20OR%20GPL--2.0--only%20OR%20GPL--3.0--only%20OR%20OGL--UK--3.0%20OR%20CC--BY--NC--SA--4.0-blue)](#license)
 [![CI](https://github.com/publicprojects-io/public-value-rust-crate/actions/workflows/ci.yml/badge.svg)](https://github.com/publicprojects-io/public-value-rust-crate/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)](Makefile)
 
@@ -179,3 +179,5 @@ Licensed, at your option, under any of:
 - BSD-3-Clause ([LICENSE-BSD-3-CLAUSE.md](LICENSE-BSD-3-CLAUSE.md))
 - GPL-2.0-only ([LICENSE-GPL-2.0.md](LICENSE-GPL-2.0.md))
 - GPL-3.0-only ([LICENSE-GPL-3.0.md](LICENSE-GPL-3.0.md))
+- OGL-UK-3.0 ([UK Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/))
+- CC-BY-NC-SA-4.0 ([Creative Commons Attribution Non Commercial Share Alike 4.0 International](https://creativecommons.org/licenses/by-nc-sa/4.0/))

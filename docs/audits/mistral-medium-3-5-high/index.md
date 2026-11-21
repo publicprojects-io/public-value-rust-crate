@@ -275,7 +275,7 @@ Start with these **10 tasks** for immediate impact:
 5. **MSRV Compliance**: The Minimum Supported Rust Version is 1.98. Ensure all code works with this version.
 6. **Currency Invariant**: All `Money` values must be tagged with `iso::USD`, even when the doc comment cites GBP figures.
 7. **No Unsafe**: This is a pure calculation crate. No `unsafe` code is permitted.
-8. **License**: All contributions are licensed under MIT OR Apache-2.0 OR BSD-3-Clause OR GPL-2.0-only OR GPL-3.0-only.
+8. **License**: All contributions are licensed under MIT OR Apache-2.0 OR BSD-3-Clause OR GPL-2.0-only OR GPL-3.0-only OR OGL-UK-3.0 OR CC-BY-NC-SA-4.0.
 
 ---
 ---
